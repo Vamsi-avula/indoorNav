@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IndoorNav - Map Upload</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .form-group { margin: 10px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, textarea, select { width: 100%; padding: 8px; margin-bottom: 10px; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>IndoorNav - Map & POI Upload</h1>
+    
+    <!-- Building Upload Section -->
+    <div class="section">
+        <h2>Upload Building</h2>
+        <form id="buildingForm">
+            <div class="form-group">
+                <label for="buildingName">Building Name:</label>
+                <input type="text" id="buildingName" required>
+            </div>
+            <div class="form-group">
+                <label for="buildingAddress">Address:</label>
+                <input type="text" id="buildingAddress" required>
+            </div>
+            <div class="form-group">
+                <label for="buildingLat">Latitude:</label>
+                <input type="number" id="buildingLat" step="0.000001" required>
+            </div>
+            <div class="form-group">
+                <label for="buildingLng">Longitude:</label>
+                <input type="number" id="buildingLng" step="0.000001" required>
+            </div>
+            <div class="form-group">
+                <label for="floorData">Floor Data (JSON):</label>
+                <textarea id="floorData" rows="6" placeholder='[{"name": "Ground Floor", "number": 0, "width": 100.0, "height": 80.0}]'></textarea>
+            </div>
+            <button type="submit">Upload Building</button>
+        </form>
+        <div id="buildingResult"></div>
+    </div>
+
+    <!-- POI Upload Section -->
+    <div class="section">
+        <h2>Upload Point of Interest</h2>
+        <form id="poiForm">
+            <div class="form-group">
+                <label for="poiName">POI Name:</label>
+                <input type="text" id="poiName" required>
+            </div>
+            <div class="form-group">
+                <label for="poiDescription">Description:</label>
+                <input type="text" id="poiDescription">
+            </div>
+            <div class="form-group">
+                <label for="poiLat">Latitude:</label>
+                <input type="number" id="poiLat" step="0.000001" required>
+            </div>
+            <div class="form-group">
+                <label for="poiLng">Longitude:</label>
+                <input type="number" id="poiLng" step="0.000001" required>
+            </div>
+            <div class="form-group">
+                <label for="poiFloor">Floor ID:</label>
+                <input type="number" id="poiFloor" required>
+            </div>
+            <div class="form-group">
+                <label for="poiCategory">Category:</label>
+                <select id="poiCategory">
+                    <option value="entrance">Entrance</option>
+                    <option value="exit">Exit</option>
+                    <option value="room">Room</option>
+                    <option value="elevator">Elevator</option>
+                    <option value="stairs">Stairs</option>
+                    <option value="restroom">Restroom</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <button type="submit">Upload POI</button>
+        </form>
+        <div id="poiResult"></div>
+    </div>
+
+    <!-- Bulk Upload Section -->
+    <div class="section">
+        <h2>Bulk Upload (JSON)</h2>
+        <div class="form-group">
+            <label for="bulkData">Bulk Data (JSON):</label>
+            <textarea id="bulkData" rows="10" placeholder='{"buildings": [...], "pois": [...]}'></textarea>
+        </div>
+        <button onclick="bulkUpload()">Bulk Upload</button>
+        <div id="bulkResult"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api/v1';
+
+        // Building upload
+        document.getElementById('buildingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = {
+                name: document.getElementById('buildingName').value,
+                address: document.getElementById('buildingAddress').value,
+                latitude: parseFloat(document.getElementById('buildingLat').value),
+                longitude: parseFloat(document.getElementById('buildingLng').value),
+                floors: JSON.parse(document.getElementById('floorData').value || '[]')
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/buildings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                document.getElementById('buildingResult').innerHTML = 
+                    `<div class="success">Building uploaded successfully! ID: ${result.id}</div>`;
+            } catch (error) {
+                document.getElementById('buildingResult').innerHTML = 
+                    `<div class="error">Error: ${error.message}</div>`;
+            }
+        });
+
+        // POI upload
+        document.getElementById('poiForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = {
+                name: document.getElementById('poiName').value,
+                description: document.getElementById('poiDescription').value,
+                latitude: parseFloat(document.getElementById('poiLat').value),
+                longitude: parseFloat(document.getElementById('poiLng').value),
+                floor_id: parseInt(document.getElementById('poiFloor').value),
+                category: document.getElementById('poiCategory').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/pois`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                document.getElementById('poiResult').innerHTML = 
+                    `<div class="success">POI uploaded successfully! ID: ${result.id}</div>`;
+            } catch (error) {
+                document.getElementById('poiResult').innerHTML = 
+                    `<div class="error">Error: ${error.message}</div>`;
+            }
+        });
+
+        // Bulk upload
+        async function bulkUpload() {
+            const data = JSON.parse(document.getElementById('bulkData').value || '{}');
+            
+            try {
+                // Upload buildings
+                if (data.buildings) {
+                    for (const building of data.buildings) {
+                        await fetch(`${API_BASE}/buildings`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(building)
+                        });
+                    }
+                }
+
+                // Upload POIs
+                if (data.pois) {
+                    for (const poi of data.pois) {
+                        await fetch(`${API_BASE}/pois`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(poi)
+                        });
+                    }
+                }
+
+                document.getElementById('bulkResult').innerHTML = 
+                    `<div class="success">Bulk upload completed!</div>`;
+            } catch (error) {
+                document.getElementById('bulkResult').innerHTML = 
+                    `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>
