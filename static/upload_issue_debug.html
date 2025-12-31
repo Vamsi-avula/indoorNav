@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Issue Debug - IndoorNav</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; text-align: center; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .section h3 { margin-top: 0; color: #495057; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; font-family: monospace; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .form-group { margin: 15px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        .big-text { font-size: 18px; font-weight: bold; color: #007bff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Upload Issue Debug</h1>
+        
+        <div class="section">
+            <h3>📋 Issue Analysis</h3>
+            <p class="big-text">✅ Upload succeeds but ❌ Image doesn't show in list</p>
+            <p>This means: File is saved → Database update fails → Display shows no image</p>
+        </div>
+
+        <div class="section">
+            <h3>🏢 Step 1: Find Warehouse Ground Floor ID</h3>
+            <button onclick="findWarehouseFloor()">Find Warehouse Ground Floor</button>
+            <div id="warehouseFloorResult"></div>
+        </div>
+
+        <div class="section">
+            <h3>🔍 Step 2: Check Floor Database Status</h3>
+            <div class="form-group">
+                <label for="floorIdInput">Floor ID (from Step 1):</label>
+                <input type="number" id="floorIdInput" placeholder="Enter floor ID...">
+            </div>
+            <button onclick="checkFloorStatus()">Check Floor Database Status</button>
+            <div id="floorStatusResult"></div>
+        </div>
+
+        <div class="section">
+            <h3>📤 Step 3: Test Upload with Database Check</h3>
+            <div class="form-group">
+                <label for="testFileInput">Choose Test Image:</label>
+                <input type="file" id="testFileInput" accept="image/*">
+            </div>
+            <button onclick="testUploadWithDatabaseCheck()">Upload & Check Database</button>
+            <div id="testUploadResult"></div>
+        </div>
+
+        <div class="section">
+            <h3>🧪 Step 4: Test Database Update</h3>
+            <div class="form-group">
+                <label for="testFloorId">Floor ID:</label>
+                <input type="number" id="testFloorId" placeholder="Enter floor ID...">
+            </div>
+            <button onclick="testDatabaseUpdate()">Test Database Update</button>
+            <button onclick="clearFloorImage()">Clear Floor Image</button>
+            <div id="databaseTestResult"></div>
+        </div>
+
+        <div class="section">
+            <h3>🔄 Step 5: Force Refresh Display</h3>
+            <button onclick="forceRefreshDisplay()">Force Refresh Building List</button>
+            <div id="refreshResult"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = `${window.location.origin}/api/v1`;
+        let warehouseFloorId = null;
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        async function findWarehouseFloor() {
+            try {
+                // Get buildings
+                const buildingsResponse = await fetch(`${API_BASE}/buildings`);
+                const buildings = await buildingsResponse.json();
+                
+                const warehouse = buildings.find(b => b.name.includes('Warehouse'));
+                
+                if (!warehouse) {
+                    showResult('warehouseFloorResult', '❌ Warehouse Facility not found', 'error');
+                    return;
+                }
+                
+                // Get warehouse floors
+                const floorsResponse = await fetch(`${API_BASE}/buildings/${warehouse.id}/floors`);
+                const floors = await floorsResponse.json();
+                
+                const groundFloor = floors.find(f => f.name.includes('Ground') || f.floor_number === 1);
+                
+                if (!groundFloor) {
+                    showResult('warehouseFloorResult', `❌ Ground Floor not found. Available: ${floors.map(f => `${f.name} (ID: ${f.id})`).join(', ')}`, 'error');
+                    return;
+                }
+                
+                warehouseFloorId = groundFloor.id;
+                document.getElementById('floorIdInput').value = groundFloor.id;
+                document.getElementById('testFloorId').value = groundFloor.id;
+                
+                let result = `✅ Found Warehouse Ground Floor:\n\n`;
+                result += `Building: ${warehouse.name} (ID: ${warehouse.id})\n`;
+                result += `Floor: ${groundFloor.name} (ID: ${groundFloor.id})\n`;
+                result += `Floor Number: ${groundFloor.floor_number}\n`;
+                result += `Has Image: ${groundFloor.floor_plan_image ? 'Yes' : 'No'}\n`;
+                result += `Image Path: ${groundFloor.floor_plan_image || 'None'}\n\n`;
+                result += `🎯 Floor ID ${groundFloor.id} copied to input fields below`;
+                
+                showResult('warehouseFloorResult', result, 'success');
+                
+            } catch (error) {
+                showResult('warehouseFloorResult', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkFloorStatus() {
+            const floorId = document.getElementById('floorIdInput').value;
+            
+            if (!floorId) {
+                showResult('floorStatusResult', '❌ Please enter floor ID', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/debug/floor/${floorId}`);
+                const floor = await response.json();
+                
+                let result = `🔍 Floor Database Status (ID: ${floorId}):\n\n`;
+                
+                if (floor.error) {
+                    result += `❌ ${floor.error}\n`;
+                } else {
+                    result += `✅ Floor Found:\n`;
+                    result += `Name: ${floor.name}\n`;
+                    result += `Building ID: ${floor.building_id}\n`;
+                    result += `Floor Number: ${floor.floor_number}\n`;
+                    result += `Has floor_plan_image: ${floor.has_floor_plan_image}\n`;
+                    result += `Has image_url: ${floor.has_image_url}\n`;
+                    result += `floor_plan_image: ${floor.floor_plan_image || 'NULL'}\n`;
+                    result += `image_url: ${floor.image_url || 'NULL'}\n`;
+                    result += `Created: ${floor.created_at || 'Unknown'}\n`;
+                    result += `Updated: ${floor.updated_at || 'Unknown'}\n`;
+                }
+                
+                showResult('floorStatusResult', result, floor.error ? 'error' : 'success');
+                
+            } catch (error) {
+                showResult('floorStatusResult', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testUploadWithDatabaseCheck() {
+            const floorId = document.getElementById('floorIdInput').value;
+            const fileInput = document.getElementById('testFileInput');
+            const file = fileInput.files[0];
+            
+            if (!floorId) {
+                showResult('testUploadResult', '❌ Please enter floor ID', 'error');
+                return;
+            }
+            
+            if (!file) {
+                showResult('testUploadResult', '❌ Please select a file', 'error');
+                return;
+            }
+            
+            let debugLog = `📤 Upload Test with Database Check:\n\n`;
+            debugLog += `Floor ID: ${floorId}\n`;
+            debugLog += `File: ${file.name}\n`;
+            debugLog += `Size: ${file.size} bytes\n\n`;
+            
+            // Check before upload
+            try {
+                const beforeResponse = await fetch(`${API_BASE}/debug/floor/${floorId}`);
+                const beforeFloor = await beforeResponse.json();
+                debugLog += `🔍 BEFORE Upload:\n`;
+                debugLog += `Has Image: ${beforeFloor.has_floor_plan_image}\n`;
+                debugLog += `Path: ${beforeFloor.floor_plan_image || 'None'}\n\n`;
+            } catch (error) {
+                debugLog += `❌ Error checking before upload: ${error.message}\n\n`;
+            }
+            
+            // Upload file
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const uploadResponse = await fetch(`${API_BASE}/upload-floor-plan/3/${floorId}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const uploadResult = await uploadResponse.json();
+                debugLog += `📤 Upload Response:\n`;
+                debugLog += `Status: ${uploadResponse.status}\n`;
+                debugLog += `Success: ${uploadResponse.ok}\n`;
+                debugLog += `Message: ${uploadResult.message}\n`;
+                debugLog += `Filename: ${uploadResult.filename}\n`;
+                debugLog += `Path: ${uploadResult.path}\n\n`;
+                
+                if (uploadResponse.ok) {
+                    // Check after upload
+                    setTimeout(async () => {
+                        try {
+                            const afterResponse = await fetch(`${API_BASE}/debug/floor/${floorId}`);
+                            const afterFloor = await afterResponse.json();
+                            
+                            debugLog += `🔍 AFTER Upload (immediate):\n`;
+                            debugLog += `Has Image: ${afterFloor.has_floor_plan_image}\n`;
+                            debugLog += `Path: ${afterFloor.floor_plan_image || 'None'}\n\n`;
+                            
+                            if (afterFloor.has_floor_plan_image) {
+                                debugLog += `✅ SUCCESS: Database updated!\n`;
+                                debugLog += `Expected: ${uploadResult.path}\n`;
+                                debugLog += `Actual: ${afterFloor.floor_plan_image}\n`;
+                                debugLog += `Match: ${uploadResult.path === afterFloor.floor_plan_image ? 'YES' : 'NO'}\n`;
+                            } else {
+                                debugLog += `❌ PROBLEM: Database NOT updated!\n`;
+                                debugLog += `Upload succeeded but database unchanged\n`;
+                            }
+                            
+                            showResult('testUploadResult', debugLog, afterFloor.has_floor_plan_image ? 'success' : 'error');
+                            
+                        } catch (error) {
+                            debugLog += `❌ Error checking after upload: ${error.message}\n`;
+                            showResult('testUploadResult', debugLog, 'error');
+                        }
+                    }, 1000);
+                    
+                } else {
+                    debugLog += `❌ Upload failed: ${uploadResult.detail || 'Unknown error'}\n`;
+                    showResult('testUploadResult', debugLog, 'error');
+                }
+                
+            } catch (error) {
+                debugLog += `❌ Upload error: ${error.message}\n`;
+                showResult('testUploadResult', debugLog, 'error');
+            }
+        }
+
+        async function testDatabaseUpdate() {
+            const floorId = document.getElementById('testFloorId').value;
+            
+            if (!floorId) {
+                showResult('databaseTestResult', '❌ Please enter floor ID', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/debug/test-floor-update/${floorId}`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                let message = `🧪 Database Update Test (ID: ${floorId}):\n\n`;
+                
+                if (result.error) {
+                    message += `❌ ${result.error}\n`;
+                } else {
+                    message += `✅ Update Test Result:\n`;
+                    message += `Success: ${result.success}\n`;
+                    message += `Test Path Set: ${result.test_path_set}\n`;
+                    message += `Current Path: ${result.current_path}\n\n`;
+                    
+                    if (result.test_path_set) {
+                        message += `✅ Database updates work correctly!\n`;
+                        message += `The issue is likely in the upload endpoint.\n`;
+                    } else {
+                        message += `❌ Database updates are failing!\n`;
+                        message += `This is a database connection issue.\n`;
+                    }
+                }
+                
+                showResult('databaseTestResult', message, result.success ? 'success' : 'error');
+                
+            } catch (error) {
+                showResult('databaseTestResult', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function clearFloorImage() {
+            const floorId = document.getElementById('testFloorId').value;
+            
+            if (!floorId) {
+                showResult('databaseTestResult', '❌ Please enter floor ID', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/debug/clear-floor-image/${floorId}`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                let message = `🧹 Clear Floor Image (ID: ${floorId}):\n\n`;
+                message += `Success: ${result.success}\n`;
+                message += `Image Cleared: ${result.image_cleared}\n`;
+                message += `Current Path: ${result.current_path}\n\n`;
+                message += `✅ Floor image cleared for testing`;
+                
+                showResult('databaseTestResult', message, 'success');
+                
+            } catch (error) {
+                showResult('databaseTestResult', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function forceRefreshDisplay() {
+            try {
+                // Get buildings and floors fresh
+                const buildingsResponse = await fetch(`${API_BASE}/buildings`);
+                const buildings = await buildingsResponse.json();
+                
+                let result = `🔄 Force Refresh Display:\n\n`;
+                result += `Buildings Count: ${buildings.length}\n\n`;
+                
+                for (const building of buildings) {
+                    try {
+                        const floorsResponse = await fetch(`${API_BASE}/buildings/${building.id}/floors`);
+                        const floors = await floorsResponse.json();
+                        
+                        result += `${building.name}:\n`;
+                        
+                        for (const floor of floors) {
+                            const hasImage = floor.floor_plan_image ? '✅' : '❌';
+                            result += `  ${hasImage} ${floor.name} (ID: ${floor.id})\n`;
+                            if (floor.floor_plan_image) {
+                                result += `    Path: ${floor.floor_plan_image}\n`;
+                            }
+                        }
+                        result += '\n';
+                        
+                    } catch (error) {
+                        result += `${building.name}: ❌ Error loading floors\n\n`;
+                    }
+                }
+                
+                showResult('refreshResult', result, 'info');
+                
+            } catch (error) {
+                showResult('refreshResult', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-find warehouse floor on page load
+        window.addEventListener('load', findWarehouseFloor);
+    </script>
+</body>
+</html>
