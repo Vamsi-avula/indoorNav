@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Database Check - IndoorNav</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; text-align: center; }
+        button { background: #007bff; color: white; padding: 15px 30px; border: none; border-radius: 5px; cursor: pointer; font-size: 18px; margin: 10px; }
+        button:hover { background: #0056b3; }
+        .result { margin: 20px 0; padding: 20px; border-radius: 5px; font-family: monospace; white-space: pre-wrap; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .big-button { background: #28a745; color: white; padding: 20px 40px; border: none; border-radius: 8px; cursor: pointer; font-size: 20px; margin: 20px 0; }
+        .big-button:hover { background: #218838; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗄️ Simple Database Check</h1>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <button onclick="checkDatabase()">🔍 Check Database</button>
+            <button onclick="createSampleData()">🏗️ Create Sample Data</button>
+            <button onclick="checkAfterCreation()">✅ Check After Creation</button>
+        </div>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = `${window.location.origin}/api/v1`;
+
+        function showResult(message, type = 'info') {
+            const element = document.getElementById('result');
+            element.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        async function checkDatabase() {
+            try {
+                const response = await fetch(`${API_BASE}/buildings`);
+                const buildings = await response.json();
+                
+                let result = `📊 Database Status Check:\n\n`;
+                result += `Buildings API Status: ${response.status}\n`;
+                result += `Buildings Count: ${buildings.length}\n\n`;
+                
+                if (buildings.length === 0) {
+                    result += `❌ NO BUILDINGS FOUND!\n\n`;
+                    result += `This means:\n`;
+                    result += `1. Database is empty\n`;
+                    result += `2. Sample data creation failed\n`;
+                    result += `3. Database connection issues\n\n`;
+                    result += `🎯 SOLUTION: Click "Create Sample Data" button`;
+                } else {
+                    result += `✅ Buildings found:\n\n`;
+                    for (let i = 0; i < buildings.length; i++) {
+                        const building = buildings[i];
+                        result += `${i + 1}. ${building.name} (ID: ${building.id})\n`;
+                        result += `   Address: ${building.address}\n`;
+                        result += `   Description: ${building.description}\n\n`;
+                    }
+                }
+                
+                showResult(result, buildings.length > 0 ? 'success' : 'error');
+                
+            } catch (error) {
+                showResult(`❌ Database Check Error:\n\n${error.message}`, 'error');
+            }
+        }
+
+        async function createSampleData() {
+            try {
+                showResult('🔄 Creating sample data...', 'info');
+                
+                const response = await fetch(`${API_BASE}/force-create-sample-data`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                let message = `🏗️ Sample Data Creation:\n\n`;
+                message += `Status: ${response.ok ? '✅ Success' : '❌ Failed'}\n`;
+                message += `HTTP Status: ${response.status}\n\n`;
+                message += `Response:\n${JSON.stringify(result, null, 2)}\n\n`;
+                
+                if (response.ok) {
+                    message += `🎯 SUCCESS! Created:\n`;
+                    message += `- Buildings: ${result.buildings}\n`;
+                    message += `- Floors: ${result.floors}\n\n`;
+                    message += `✅ Now check your upload interface!`;
+                } else {
+                    message += `❌ FAILED!\n\n`;
+                    message += `Error: ${result.detail || 'Unknown error'}\n\n`;
+                    message += `🔍 Check server logs for details`;
+                }
+                
+                showResult(message, response.ok ? 'success' : 'error');
+                
+            } catch (error) {
+                showResult(`❌ Sample Data Creation Error:\n\n${error.message}`, 'error');
+            }
+        }
+
+        async function checkAfterCreation() {
+            try {
+                showResult('🔄 Checking database after creation...', 'info');
+                
+                // Check buildings
+                const buildingsResponse = await fetch(`${API_BASE}/buildings`);
+                const buildings = await buildingsResponse.json();
+                
+                // Check floors
+                const floorsResponse = await fetch(`${API_BASE}/floors`);
+                const floors = await floorsResponse.json();
+                
+                let message = `✅ Database Status After Creation:\n\n`;
+                message += `Buildings: ${buildings.length}\n`;
+                message += `Floors: ${floors.length}\n\n`;
+                
+                if (buildings.length > 0) {
+                    message += `📋 Buildings List:\n`;
+                    for (let i = 0; i < buildings.length; i++) {
+                        const building = buildings[i];
+                        message += `${i + 1}. ${building.name} (ID: ${building.id})\n`;
+                    }
+                    
+                    // Find warehouse
+                    const warehouse = buildings.find(b => b.name.includes('Warehouse'));
+                    if (warehouse) {
+                        message += `\n🏢 Found Warehouse: ${warehouse.name} (ID: ${warehouse.id})\n`;
+                        
+                        // Get warehouse floors
+                        try {
+                            const warehouseFloorsResponse = await fetch(`${API_BASE}/buildings/${warehouse.id}/floors`);
+                            const warehouseFloors = await warehouseFloorsResponse.json();
+                            
+                            message += `📁 Warehouse Floors: ${warehouseFloors.length}\n`;
+                            for (let j = 0; j < warehouseFloors.length; j++) {
+                                const floor = warehouseFloors[j];
+                                message += `   ${j + 1}. ${floor.name} (ID: ${floor.id})\n`;
+                            }
+                        } catch (error) {
+                            message += `❌ Error getting warehouse floors: ${error.message}\n`;
+                        }
+                    } else {
+                        message += `\n❌ Warehouse Facility not found!\n`;
+                    }
+                } else {
+                    message += `❌ Still no buildings found!\n`;
+                }
+                
+                showResult(message, buildings.length > 0 ? 'success' : 'error');
+                
+            } catch (error) {
+                showResult(`❌ Post-Creation Check Error:\n\n${error.message}`, 'error');
+            }
+        }
+
+        // Auto-check database on page load
+        window.addEventListener('load', checkDatabase);
+    </script>
+</body>
+</html>
