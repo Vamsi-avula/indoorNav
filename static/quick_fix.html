@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Fix - IndoorNav</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; text-align: center; }
+        .big-button { background: #28a745; color: white; padding: 20px 40px; border: none; border-radius: 8px; cursor: pointer; font-size: 20px; margin: 20px 0; width: 100%; }
+        .big-button:hover { background: #218838; }
+        .result { margin: 20px 0; padding: 20px; border-radius: 5px; font-family: monospace; white-space: pre-wrap; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .step { background: #e9ecef; padding: 15px; margin: 10px 0; border-radius: 5px; text-align: center; }
+        .step h3 { margin: 0 0 10px 0; color: #495057; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Quick Fix Dashboard</h1>
+        
+        <div class="step">
+            <h3>Step 1: Check Current Status</h3>
+            <button class="big-button" onclick="checkCurrentStatus()">🔍 Check Current Database Status</button>
+            <div id="statusResult"></div>
+        </div>
+
+        <div class="step">
+            <h3>Step 2: Create Sample Data</h3>
+            <button class="big-button" onclick="createSampleData()">🏗️ Create Sample Buildings & Floors</button>
+            <div id="createResult"></div>
+        </div>
+
+        <div class="step">
+            <h3>Step 3: Verify Creation</h3>
+            <button class="big-button" onclick="verifyCreation()">✅ Verify Sample Data Created</button>
+            <div id="verifyResult"></div>
+        </div>
+
+        <div class="step">
+            <h3>Step 4: Test Upload</h3>
+            <button class="big-button" onclick="goToUpload()">📤 Go to Upload Test</button>
+            <div id="uploadResult"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = `${window.location.origin}/api/v1`;
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        async function checkCurrentStatus() {
+            try {
+                showResult('statusResult', '🔄 Checking database...', 'info');
+                
+                const response = await fetch(`${API_BASE}/buildings`);
+                const buildings = await response.json();
+                
+                let result = `📊 Current Database Status:\n\n`;
+                result += `Buildings Count: ${buildings.length}\n`;
+                result += `API Status: ${response.status}\n\n`;
+                
+                if (buildings.length === 0) {
+                    result += `❌ NO BUILDINGS FOUND!\n\n`;
+                    result += `🎯 SOLUTION: Click "Create Sample Buildings & Floors"`;
+                } else {
+                    result += `✅ Buildings Found:\n\n`;
+                    for (let i = 0; i < buildings.length; i++) {
+                        const building = buildings[i];
+                        result += `${i + 1}. ${building.name} (ID: ${building.id})\n`;
+                    }
+                    
+                    const warehouse = buildings.find(b => b.name.includes('Warehouse'));
+                    if (warehouse) {
+                        result += `\n✅ Warehouse Facility found! (ID: ${warehouse.id})`;
+                    } else {
+                        result += `\n❌ Warehouse Facility NOT found`;
+                    }
+                }
+                
+                showResult('statusResult', result, buildings.length > 0 ? 'success' : 'error');
+                
+            } catch (error) {
+                showResult('statusResult', `❌ Error checking status:\n\n${error.message}`, 'error');
+            }
+        }
+
+        async function createSampleData() {
+            try {
+                showResult('createResult', '🔄 Creating sample data...', 'info');
+                
+                const response = await fetch(`${API_BASE}/force-create-sample-data`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                let message = `🏗️ Sample Data Creation:\n\n`;
+                message += `HTTP Status: ${response.status}\n`;
+                message += `Success: ${response.ok ? 'YES' : 'NO'}\n\n`;
+                
+                if (response.ok) {
+                    message += `✅ SUCCESS!\n\n`;
+                    message += `Buildings Created: ${result.buildings}\n`;
+                    message += `Floors Created: ${result.floors}\n\n`;
+                    
+                    if (result.data && result.data.buildings) {
+                        message += `📋 Buildings:\n`;
+                        for (const building of result.data.buildings) {
+                            message += `- ${building.name} (ID: ${building.id})\n`;
+                        }
+                    }
+                    
+                    message += `\n🎯 NEXT STEP: Click "Verify Sample Data Created"`;
+                } else {
+                    message += `❌ FAILED!\n\n`;
+                    message += `Error: ${result.detail || 'Unknown error'}\n\n`;
+                    message += `🔍 Check server logs for details`;
+                }
+                
+                showResult('createResult', message, response.ok ? 'success' : 'error');
+                
+            } catch (error) {
+                showResult('createResult', `❌ Error creating sample data:\n\n${error.message}`, 'error');
+            }
+        }
+
+        async function verifyCreation() {
+            try {
+                showResult('verifyResult', '🔄 Verifying creation...', 'info');
+                
+                const buildingsResponse = await fetch(`${API_BASE}/buildings`);
+                const buildings = await buildingsResponse.json();
+                
+                let result = `✅ Verification Results:\n\n`;
+                result += `Total Buildings: ${buildings.length}\n\n`;
+                
+                if (buildings.length === 0) {
+                    result += `❌ Still no buildings found!\n\n`;
+                    result += `🔄 Try creating sample data again`;
+                    showResult('verifyResult', result, 'error');
+                    return;
+                }
+                
+                // Check each building's floors
+                let totalFloors = 0;
+                let warehouseFound = false;
+                let warehouseFloors = [];
+                
+                for (const building of buildings) {
+                    try {
+                        const floorsResponse = await fetch(`${API_BASE}/buildings/${building.id}/floors`);
+                        const floors = await floorsResponse.json();
+                        
+                        totalFloors += floors.length;
+                        
+                        result += `🏢 ${building.name} (ID: ${building.id}):\n`;
+                        result += `   Floors: ${floors.length}\n`;
+                        
+                        for (const floor of floors) {
+                            result += `   - ${floor.name} (ID: ${floor.id})\n`;
+                        }
+                        result += '\n';
+                        
+                        if (building.name.includes('Warehouse')) {
+                            warehouseFound = true;
+                            warehouseFloors = floors;
+                        }
+                        
+                    } catch (error) {
+                        result += `🏢 ${building.name}: ❌ Error loading floors\n\n`;
+                    }
+                }
+                
+                result += `📊 Summary:\n`;
+                result += `Total Buildings: ${buildings.length}\n`;
+                result += `Total Floors: ${totalFloors}\n`;
+                result += `Warehouse Found: ${warehouseFound ? 'YES' : 'NO'}\n\n`;
+                
+                if (warehouseFound && warehouseFloors.length > 0) {
+                    result += `🎯 SUCCESS! Ready for upload testing!\n\n`;
+                    result += `Warehouse Floors available:\n`;
+                    for (const floor of warehouseFloors) {
+                        result += `- ${floor.name} (ID: ${floor.id})\n`;
+                    }
+                    result += `\n📤 Click "Go to Upload Test" to test upload`;
+                } else {
+                    result += `❌ Warehouse or floors not found\n\n`;
+                    result += `🔄 Try creating sample data again`;
+                }
+                
+                showResult('verifyResult', result, warehouseFound && warehouseFloors.length > 0 ? 'success' : 'error');
+                
+            } catch (error) {
+                showResult('verifyResult', `❌ Error verifying creation:\n\n${error.message}`, 'error');
+            }
+        }
+
+        function goToUpload() {
+            const uploadUrl = `${window.location.origin}/static/floor_plan_upload.html`;
+            
+            let message = `📤 Upload Test:\n\n`;
+            message += `Opening upload interface...\n\n`;
+            message += `🎯 Steps:\n`;
+            message += `1. Select "Warehouse Facility"\n`;
+            message += `2. Select "Ground Floor"\n`;
+            message += `3. Upload your floor plan\n`;
+            message += `4. Check if it appears in the list\n\n`;
+            message += `🔗 Upload URL: ${uploadUrl}`;
+            
+            showResult('uploadResult', message, 'info');
+            
+            // Open upload in new tab after 2 seconds
+            setTimeout(() => {
+                window.open(uploadUrl, '_blank');
+            }, 2000);
+        }
+
+        // Auto-check status on page load
+        window.addEventListener('load', checkCurrentStatus);
+    </script>
+</body>
+</html>
