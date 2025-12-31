@@ -120,16 +120,29 @@ async def get_floor_plan_versions(floor_id: int, db: Session = Depends(get_db)):
     ).order_by(FloorPlanVersion.version_number.desc()).all()
     return versions
 
-@router.get("/floors/{floor_id}/versions/{version_id}", response_model=FloorPlanVersion)
-async def get_floor_plan_version(floor_id: int, version_id: int, db: Session = Depends(get_db)):
+@router.get("/versions/{version_id}", response_model=dict)
+async def get_floor_plan_version(version_id: int, db: Session = Depends(get_db)):
     """Get a specific version of floor plan"""
-    version = db.query(FloorPlanVersion).filter(
-        FloorPlanVersion.id == version_id,
-        FloorPlanVersion.floor_id == floor_id
-    ).first()
+    version = db.query(FloorPlanVersion).filter(FloorPlanVersion.id == version_id).first()
     if not version:
         raise HTTPException(status_code=404, detail="Version not found")
-    return version
+    
+    return {
+        "id": version.id,
+        "floor_id": version.floor_id,
+        "version_number": version.version_number,
+        "file_path": version.file_path,
+        "file_type": version.file_type,
+        "file_size": version.file_size,
+        "width": version.width,
+        "height": version.height,
+        "scale": version.scale,
+        "change_notes": version.change_notes,
+        "created_by": version.created_by,
+        "is_active": version.is_active,
+        "created_at": version.created_at,
+        "updated_at": version.updated_at
+    }
 
 @router.put("/floors/{floor_id}/versions/{version_id}", response_model=FloorPlanVersion)
 async def update_floor_plan_version(
@@ -154,7 +167,7 @@ async def update_floor_plan_version(
     return version
 
 # Points of Interest Management
-@router.post("/versions/{version_id}/pois", response_model=PointOfInterest)
+@router.post("/versions/{version_id}/pois", response_model=dict)
 async def create_poi(poi: POICreate, db: Session = Depends(get_db)):
     """Create a Point of Interest"""
     version = db.query(FloorPlanVersion).filter(FloorPlanVersion.id == poi.version_id).first()
@@ -165,16 +178,42 @@ async def create_poi(poi: POICreate, db: Session = Depends(get_db)):
     db.add(db_poi)
     db.commit()
     db.refresh(db_poi)
-    return db_poi
+    
+    return {
+        "id": db_poi.id,
+        "version_id": db_poi.version_id,
+        "x_coordinate": db_poi.x_coordinate,
+        "y_coordinate": db_poi.y_coordinate,
+        "name": db_poi.name,
+        "category": db_poi.category,
+        "poi_type": db_poi.poi_type,
+        "description": db_poi.description,
+        "is_active": db_poi.is_active,
+        "created_at": db_poi.created_at,
+        "updated_at": db_poi.updated_at
+    }
 
-@router.get("/versions/{version_id}/pois", response_model=List[PointOfInterest])
+@router.get("/versions/{version_id}/pois", response_model=List[dict])
 async def get_pois(version_id: int, db: Session = Depends(get_db)):
     """Get all POIs for a version"""
     pois = db.query(PointOfInterest).filter(
         PointOfInterest.version_id == version_id,
         PointOfInterest.is_active == True
     ).all()
-    return pois
+    
+    return [{
+        "id": poi.id,
+        "version_id": poi.version_id,
+        "x_coordinate": poi.x_coordinate,
+        "y_coordinate": poi.y_coordinate,
+        "name": poi.name,
+        "category": poi.category,
+        "poi_type": poi.poi_type,
+        "description": poi.description,
+        "is_active": poi.is_active,
+        "created_at": poi.created_at,
+        "updated_at": poi.updated_at
+    } for poi in pois]
 
 @router.put("/pois/{poi_id}", response_model=PointOfInterest)
 async def update_poi(poi_id: int, poi_update: POIUpdate, db: Session = Depends(get_db)):
@@ -203,7 +242,7 @@ async def delete_poi(poi_id: int, db: Session = Depends(get_db)):
     return {"message": "POI deleted successfully"}
 
 # Routing Graph Management
-@router.post("/versions/{version_id}/routing/nodes", response_model=RoutingNode)
+@router.post("/versions/{version_id}/routing/nodes", response_model=dict)
 async def create_routing_node(node: RoutingNodeCreate, db: Session = Depends(get_db)):
     """Create a routing node"""
     version = db.query(FloorPlanVersion).filter(FloorPlanVersion.id == node.version_id).first()
@@ -214,18 +253,38 @@ async def create_routing_node(node: RoutingNodeCreate, db: Session = Depends(get
     db.add(db_node)
     db.commit()
     db.refresh(db_node)
-    return db_node
+    
+    return {
+        "id": db_node.id,
+        "version_id": db_node.version_id,
+        "x_coordinate": db_node.x_coordinate,
+        "y_coordinate": db_node.y_coordinate,
+        "node_type": db_node.node_type,
+        "is_active": db_node.is_active,
+        "created_at": db_node.created_at,
+        "updated_at": db_node.updated_at
+    }
 
-@router.get("/versions/{version_id}/routing/nodes", response_model=List[RoutingNode])
+@router.get("/versions/{version_id}/routing/nodes", response_model=List[dict])
 async def get_routing_nodes(version_id: int, db: Session = Depends(get_db)):
     """Get all routing nodes for a version"""
     nodes = db.query(RoutingNode).filter(
         RoutingNode.version_id == version_id,
         RoutingNode.is_active == True
     ).all()
-    return nodes
+    
+    return [{
+        "id": node.id,
+        "version_id": node.version_id,
+        "x_coordinate": node.x_coordinate,
+        "y_coordinate": node.y_coordinate,
+        "node_type": node.node_type,
+        "is_active": node.is_active,
+        "created_at": node.created_at,
+        "updated_at": node.updated_at
+    } for node in nodes]
 
-@router.post("/versions/{version_id}/routing/edges", response_model=RoutingEdge)
+@router.post("/versions/{version_id}/routing/edges", response_model=dict)
 async def create_routing_edge(edge: RoutingEdgeCreate, db: Session = Depends(get_db)):
     """Create a routing edge"""
     version = db.query(FloorPlanVersion).filter(FloorPlanVersion.id == edge.version_id).first()
@@ -243,16 +302,38 @@ async def create_routing_edge(edge: RoutingEdgeCreate, db: Session = Depends(get
     db.add(db_edge)
     db.commit()
     db.refresh(db_edge)
-    return db_edge
+    
+    return {
+        "id": db_edge.id,
+        "version_id": db_edge.version_id,
+        "from_node_id": db_edge.from_node_id,
+        "to_node_id": db_edge.to_node_id,
+        "distance": db_edge.distance,
+        "edge_type": db_edge.edge_type,
+        "is_active": db_edge.is_active,
+        "created_at": db_edge.created_at,
+        "updated_at": db_edge.updated_at
+    }
 
-@router.get("/versions/{version_id}/routing/edges", response_model=List[RoutingEdge])
+@router.get("/versions/{version_id}/routing/edges", response_model=List[dict])
 async def get_routing_edges(version_id: int, db: Session = Depends(get_db)):
     """Get all routing edges for a version"""
     edges = db.query(RoutingEdge).filter(
         RoutingEdge.version_id == version_id,
         RoutingEdge.is_active == True
     ).all()
-    return edges
+    
+    return [{
+        "id": edge.id,
+        "version_id": edge.version_id,
+        "from_node_id": edge.from_node_id,
+        "to_node_id": edge.to_node_id,
+        "distance": edge.distance,
+        "edge_type": edge.edge_type,
+        "is_active": edge.is_active,
+        "created_at": edge.created_at,
+        "updated_at": edge.updated_at
+    } for edge in edges]
 
 # Map Validation and Publishing
 @router.post("/versions/{version_id}/validate", response_model=MapValidationResult)

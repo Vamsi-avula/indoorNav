@@ -695,11 +695,31 @@
                 });
                 
                 if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.detail || 'API call failed');
+                    const errorText = await response.text();
+                    console.error('API Error Response:', errorText);
+                    
+                    let errorMessage = 'API call failed';
+                    try {
+                        const error = JSON.parse(errorText);
+                        errorMessage = error.detail || error.message || errorMessage;
+                    } catch (e) {
+                        errorMessage = errorText || errorMessage;
+                    }
+                    
+                    throw new Error(errorMessage);
                 }
                 
-                return await response.json();
+                const responseText = await response.text();
+                if (!responseText) {
+                    return {};
+                }
+                
+                try {
+                    return JSON.parse(responseText);
+                } catch (e) {
+                    console.error('Failed to parse JSON response:', responseText);
+                    return responseText;
+                }
             } catch (error) {
                 console.error('API Error:', error);
                 throw error;
