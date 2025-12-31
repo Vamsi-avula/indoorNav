@@ -85,8 +85,7 @@ def init_database():
                 floor = Floor(
                     building_id=building.id,
                     floor_number=floor_num,
-                    name=floor_name,
-                    description=f"{floor_name} of {building.name}"
+                    name=floor_name
                 )
                 floors_data.append(floor)
                 db.add(floor)

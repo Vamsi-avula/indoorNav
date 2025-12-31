@@ -62,8 +62,7 @@ async def init_sample_data(db: Session = Depends(get_db)):
                 floor = Floor(
                     building_id=building.id,
                     floor_number=floor_num,
-                    name=floor_name,
-                    description=f"{floor_name} of {building.name}"
+                    name=floor_name
                 )
                 db.add(floor)
         
