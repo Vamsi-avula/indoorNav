@@ -21,8 +21,7 @@ class FloorPlanVersion(Base):
     is_active = Column(Boolean, default=True)
     change_notes = Column(Text)
     
-    # Relationships
-    floor = relationship("Floor", back_populates="versions")
+    # Relationships - removed floor relationship to avoid circular dependency
     pois = relationship("PointOfInterest", back_populates="version")
     routing_nodes = relationship("RoutingNode", back_populates="version")
     routing_edges = relationship("RoutingEdge", back_populates="version")

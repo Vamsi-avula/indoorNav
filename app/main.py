@@ -10,18 +10,29 @@ Base.metadata.create_all(bind=engine)
 
 # Try to import map authoring components safely
 try:
+    # Test database connection first
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        conn.execute(text("SELECT 1"))
+    
+    # If database works, try importing map models
     from app.routers import map_authoring
     from app.map_models import FloorPlanVersion, PointOfInterest, RoutingNode, RoutingEdge, MapPublishing
     
     # Create map authoring tables
-    FloorPlanVersion.metadata.create_all(bind=engine)
-    PointOfInterest.metadata.create_all(bind=engine)
-    RoutingNode.metadata.create_all(bind=engine)
-    RoutingEdge.metadata.create_all(bind=engine)
-    MapPublishing.metadata.create_all(bind=engine)
-    
-    MAP_AUTH_ENABLED = True
-    print("Map authoring module loaded successfully")
+    try:
+        FloorPlanVersion.metadata.create_all(bind=engine)
+        PointOfInterest.metadata.create_all(bind=engine)
+        RoutingNode.metadata.create_all(bind=engine)
+        RoutingEdge.metadata.create_all(bind=engine)
+        MapPublishing.metadata.create_all(bind=engine)
+        
+        MAP_AUTH_ENABLED = True
+        print("Map authoring module loaded successfully")
+    except Exception as e:
+        print(f"Error creating map authoring tables: {e}")
+        MAP_AUTH_ENABLED = False
+        
 except ImportError as e:
     print(f"Map authoring module not available: {e}")
     MAP_AUTH_ENABLED = False
