@@ -74,58 +74,32 @@
         let buildings = [];
         let floors = [];
 
-        // Create sample building and floor data
-        async function createSampleData() {
+        // Create sample buildings
+        async function createSampleBuildings() {
             try {
-                // Create building
-                const buildingResponse = await fetch(`${API_BASE}/buildings`, {
+                const response = await fetch(`${API_BASE}/init-sample-data`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: 'Sample Building',
-                        address: '123 Test Street',
-                        latitude: 40.7128,
-                        longitude: -74.0060
-                    })
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
                 });
-
-                if (!buildingResponse.ok) {
-                    const error = await buildingResponse.json();
-                    throw new Error(error.detail || 'Failed to create building');
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showResult(`Sample data created: ${result.buildings} buildings, ${result.floors} floors`, 'success');
+                    await loadBuildings();
+                } else {
+                    const error = await response.json();
+                    showResult(error.detail || 'Failed to create sample data', 'error');
                 }
-
-                const building = await buildingResponse.json();
-                buildings.push(building);
-
-                // Create floor
-                const floorResponse = await fetch(`${API_BASE}/floors`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        building_id: building.id,
-                        floor_number: 1,
-                        name: 'First Floor',
-                        width: 100.0,
-                        height: 100.0
-                    })
-                });
-
-                if (!floorResponse.ok) {
-                    const error = await floorResponse.json();
-                    throw new Error(error.detail || 'Failed to create floor');
-                }
-
-                const floor = await floorResponse.json();
-                floors.push(floor);
-
-                // Update dropdowns
-                updateBuildingDropdown();
-                updateFloorDropdown();
-
-                showResult('✅ Sample building and floor created successfully!', 'success');
             } catch (error) {
-                showResult(`❌ Error creating sample data: ${error.message}`, 'error');
+                showResult(`Error creating sample data: ${error.message}`, 'error');
             }
+        }
+
+        // Create sample data (alias for createSampleBuildings)
+        async function createSampleData() {
+            await createSampleBuildings();
         }
 
         // Update building dropdown
