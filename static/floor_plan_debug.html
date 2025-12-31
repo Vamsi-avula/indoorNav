@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Floor Plan Debug - IndoorNav</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; text-align: center; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .debug-section h3 { margin-top: 0; color: #495057; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; font-family: monospace; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .floor-item { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #007bff; }
+        .floor-item h4 { margin: 0 0 10px 0; color: #333; }
+        .floor-item p { margin: 5px 0; color: #666; }
+        .image-preview { max-width: 200px; max-height: 150px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
+        .no-image { background: #e9ecef; padding: 20px; text-align: center; color: #6c757d; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Floor Plan Debug Dashboard</h1>
+        
+        <div class="debug-section">
+            <h3>📊 Check All Buildings and Floors</h3>
+            <button onclick="checkAllFloors()">Check All Floors</button>
+            <div id="allFloorsResult"></div>
+        </div>
+
+        <div class="debug-section">
+            <h3>🖼️ Image Path Test</h3>
+            <button onclick="testImagePaths()">Test Image Paths</button>
+            <div id="imagePathsResult"></div>
+        </div>
+
+        <div class="debug-section">
+            <h3>🏢 Warehouse Facility Details</h3>
+            <button onclick="checkWarehouseFloors()">Check Warehouse Floors</button>
+            <div id="warehouseResult"></div>
+        </div>
+
+        <div class="debug-section">
+            <h3>📤 Direct Upload Test</h3>
+            <button onclick="testDirectUpload()">Test Upload API</button>
+            <div id="uploadTestResult"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = `${window.location.origin}/api/v1`;
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        function showFloorDetails(elementId, floors, type = 'info') {
+            const element = document.getElementById(elementId);
+            let html = '';
+            
+            if (floors.length === 0) {
+                html = '<p>No floors found</p>';
+            } else {
+                for (const floor of floors) {
+                    html += `
+                        <div class="floor-item">
+                            <h4>${floor.name} (ID: ${floor.id})</h4>
+                            <p><strong>Building ID:</strong> ${floor.building_id}</p>
+                            <p><strong>Floor Number:</strong> ${floor.floor_number}</p>
+                            <p><strong>Has Image:</strong> ${floor.floor_plan_image ? 'Yes' : 'No'}</p>
+                            <p><strong>Image Path:</strong> ${floor.floor_plan_image || 'None'}</p>
+                            ${floor.floor_plan_image ? 
+                                `<img src="${floor.floor_plan_image}" class="image-preview" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <div class="no-image" style="display:none;">❌ Image failed to load</div>` : 
+                                '<div class="no-image">❌ No image uploaded</div>'
+                            }
+                        </div>
+                    `;
+                }
+            }
+            
+            element.innerHTML = html;
+        }
+
+        async function checkAllFloors() {
+            try {
+                // Get all buildings
+                const buildingsResponse = await fetch(`${API_BASE}/buildings`);
+                const buildings = await buildingsResponse.json();
+                
+                let allFloors = [];
+                let results = '';
+                
+                for (const building of buildings) {
+                    try {
+                        const floorsResponse = await fetch(`${API_BASE}/buildings/${building.id}/floors`);
+                        const floors = await floorsResponse.json();
+                        
+                        results += `<h4>${building.name} (ID: ${building.id})</h4>`;
+                        results += `<p>Floors: ${floors.length}</p>`;
+                        
+                        for (const floor of floors) {
+                            results += `<p>- ${floor.name}: ${floor.floor_plan_image ? '✅ Has image' : '❌ No image'}</p>`;
+                            if (floor.floor_plan_image) {
+                                results += `  <small>Path: ${floor.floor_plan_image}</small><br>`;
+                            }
+                        }
+                        
+                        allFloors.push(...floors);
+                    } catch (error) {
+                        results += `<p>Error loading floors for ${building.name}: ${error.message}</p>`;
+                    }
+                }
+                
+                showFloorDetails('allFloorsResult', allFloors, 'success');
+                showResult('allFloorsResult', results + '<br><br>' + `Total floors: ${allFloors.length}`, 'success');
+                
+            } catch (error) {
+                showResult('allFloorsResult', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testImagePaths() {
+            try {
+                const buildingsResponse = await fetch(`${API_BASE}/buildings`);
+                const buildings = await buildingsResponse.json();
+                
+                let results = '';
+                let imageTests = [];
+                
+                for (const building of buildings) {
+                    try {
+                        const floorsResponse = await fetch(`${API_BASE}/buildings/${building.id}/floors`);
+                        const floors = await floorsResponse.json();
+                        
+                        for (const floor of floors) {
+                            if (floor.floor_plan_image) {
+                                // Test if image is accessible
+                                try {
+                                    const imageResponse = await fetch(floor.floor_plan_image);
+                                    const accessible = imageResponse.ok;
+                                    imageTests.push({
+                                        floor: `${building.name} - ${floor.name}`,
+                                        path: floor.floor_plan_image,
+                                        accessible: accessible,
+                                        status: imageResponse.status
+                                    });
+                                } catch (error) {
+                                    imageTests.push({
+                                        floor: `${building.name} - ${floor.name}`,
+                                        path: floor.floor_plan_image,
+                                        accessible: false,
+                                        error: error.message
+                                    });
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        results += `<p>Error testing images for ${building.name}: ${error.message}</p>`;
+                    }
+                }
+                
+                if (imageTests.length === 0) {
+                    results = '<p>No images found to test</p>';
+                } else {
+                    results = '<h4>Image Path Tests:</h4>';
+                    for (const test of imageTests) {
+                        const status = test.accessible ? '✅' : '❌';
+                        results += `<p>${status} ${test.floor}</p>`;
+                        results += `  <small>Path: ${test.path}</small><br>`;
+                        if (test.status) {
+                            results += `  <small>Status: ${test.status}</small><br>`;
+                        }
+                        if (test.error) {
+                            results += `  <small>Error: ${test.error}</small><br>`;
+                        }
+                    }
+                }
+                
+                showResult('imagePathsResult', results, imageTests.some(t => t.accessible) ? 'success' : 'error');
+                
+            } catch (error) {
+                showResult('imagePathsResult', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkWarehouseFloors() {
+            try {
+                // Find Warehouse Facility building
+                const buildingsResponse = await fetch(`${API_BASE}/buildings`);
+                const buildings = await buildingsResponse.json();
+                
+                const warehouse = buildings.find(b => b.name.includes('Warehouse'));
+                
+                if (!warehouse) {
+                    showResult('warehouseResult', 'Warehouse Facility building not found', 'error');
+                    return;
+                }
+                
+                const floorsResponse = await fetch(`${API_BASE}/buildings/${warehouse.id}/floors`);
+                const floors = await floorsResponse.json();
+                
+                showFloorDetails('warehouseResult', floors, 'success');
+                
+            } catch (error) {
+                showResult('warehouseResult', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testDirectUpload() {
+            try {
+                // Test the upload endpoint exists and works
+                const response = await fetch(`${API_BASE}/upload-floor-plan/1/1`, {
+                    method: 'POST'
+                });
+                
+                let result = '';
+                if (response.status === 422) {
+                    result = '✅ Upload endpoint exists (422 expected - no file provided)';
+                } else if (response.status === 404) {
+                    result = '❌ Upload endpoint not found or building/floor not found';
+                } else {
+                    result = `Status: ${response.status} - ${await response.text()}`;
+                }
+                
+                showResult('uploadTestResult', result, response.status === 422 ? 'success' : 'error');
+                
+            } catch (error) {
+                showResult('uploadTestResult', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-check warehouse floors on page load
+        window.addEventListener('load', checkWarehouseFloors);
+    </script>
+</body>
+</html>
