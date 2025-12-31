@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IndoorNav - Production URLs</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
+        .url-box { background: #e9ecef; padding: 15px; margin: 10px 0; border-radius: 5px; font-family: monospace; }
+        .success { color: #28a745; }
+        .info { color: #17a2b8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌐 IndoorNav - Production URLs</h1>
+        
+        <h2 class="success">✅ After Render Deployment</h2>
+        
+        <div class="url-box">
+            <strong>Backend API:</strong><br>
+            <span id="backendUrl">https://indoornav-backend.onrender.com</span>
+        </div>
+        
+        <div class="url-box">
+            <strong>API Documentation:</strong><br>
+            <span id="docsUrl">https://indoornav-backend.onrender.com/docs</span>
+        </div>
+        
+        <div class="url-box">
+            <strong>Floor Plan Upload:</strong><br>
+            <span id="uploadUrl">https://indoornav-backend.onrender.com/static/floor_plan_upload.html</span>
+        </div>
+        
+        <div class="url-box">
+            <strong>Health Check:</strong><br>
+            <span id="healthUrl">https://indoornav-backend.onrender.com/health</span>
+        </div>
+        
+        <h2 class="info">📱 Android App Configuration</h2>
+        <div class="url-box">
+            Update secrets.properties:<br>
+            BACKEND_URL=https://indoornav-backend.onrender.com
+        </div>
+        
+        <h2 class="info">🔄 Testing</h2>
+        <button onclick="testUrls()">Test All URLs</button>
+        <div id="testResults"></div>
+    </div>
+
+    <script>
+        // Get current host (works in both local and production)
+        const currentHost = window.location.origin;
+        
+        // Update URLs dynamically
+        document.getElementById('backendUrl').textContent = currentHost;
+        document.getElementById('docsUrl').textContent = currentHost + '/docs';
+        document.getElementById('uploadUrl').textContent = currentHost + '/static/floor_plan_upload.html';
+        document.getElementById('healthUrl').textContent = currentHost + '/health';
+        
+        // Test URLs
+        async function testUrls() {
+            const results = document.getElementById('testResults');
+            results.innerHTML = '<h3>Testing URLs...</h3>';
+            
+            const urls = [
+                { name: 'Health Check', url: currentHost + '/health' },
+                { name: 'API Root', url: currentHost + '/' },
+                { name: 'Upload Interface', url: currentHost + '/static/floor_plan_upload.html' }
+            ];
+            
+            let html = '';
+            for (const test of urls) {
+                try {
+                    const response = await fetch(test.url);
+                    const status = response.ok ? '✅' : '❌';
+                    html += `<p>${status} ${test.name}: ${response.status}</p>`;
+                } catch (error) {
+                    html += `<p>❌ ${test.name}: Failed to connect</p>`;
+                }
+            }
+            results.innerHTML = html;
+        }
+        
+        // Auto-test on page load
+        window.addEventListener('load', testUrls);
+    </script>
+</body>
+</html>
