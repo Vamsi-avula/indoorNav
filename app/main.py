@@ -1,12 +1,20 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from app.routers import buildings, floors, fingerprints, upload
+from app.routers import buildings, floors, fingerprints, upload, map_authoring
 from app.database import engine
 from app.models import Base
+from app.map_models import FloorPlanVersion, PointOfInterest, RoutingNode, RoutingEdge, MapPublishing
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
+
+# Create map authoring tables
+FloorPlanVersion.metadata.create_all(bind=engine)
+PointOfInterest.metadata.create_all(bind=engine)
+RoutingNode.metadata.create_all(bind=engine)
+RoutingEdge.metadata.create_all(bind=engine)
+MapPublishing.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Indoor Navigation API",
@@ -28,6 +36,7 @@ app.include_router(buildings.router, prefix="/api/v1", tags=["buildings"])
 app.include_router(floors.router, prefix="/api/v1", tags=["floors"])
 app.include_router(fingerprints.router, prefix="/api/v1", tags=["fingerprints"])
 app.include_router(upload.router, prefix="/api/v1", tags=["upload"])
+app.include_router(map_authoring.router, prefix="/api/v1", tags=["map-authoring"])
 
 # Mount static files
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")

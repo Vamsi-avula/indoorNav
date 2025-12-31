@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map Authoring Studio - IndoorNav</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 { font-size: 1.8rem; font-weight: 300; }
+        .header p { opacity: 0.9; margin-top: 0.5rem; }
+        
+        .container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .workflow-tabs {
+            display: flex;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            background: #f8f9fa;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab.active {
+            background: white;
+            border-bottom-color: #667eea;
+            color: #667eea;
+            font-weight: 500;
+        }
+        
+        .tab:hover:not(.active) {
+            background: #e9ecef;
+        }
+        
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .card h3 {
+            color: #333;
+            margin-bottom: 1.5rem;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group label {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: #555;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 0.75rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .status-draft { background: #f8f9fa; color: #6c757d; }
+        .status-review { background: #fff3cd; color: #856404; }
+        .status-approved { background: #d4edda; color: #155724; }
+        .status-published { background: #cce5ff; color: #004085; }
+        
+        .version-list {
+            display: grid;
+            gap: 1rem;
+        }
+        
+        .version-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .version-info h4 {
+            margin-bottom: 0.25rem;
+            color: #333;
+        }
+        
+        .version-info p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .canvas-container {
+            position: relative;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            min-height: 500px;
+            border: 2px dashed #dee2e6;
+        }
+        
+        .canvas {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            background: white;
+            border-radius: 4px;
+            overflow: hidden;
+            cursor: crosshair;
+        }
+        
+        .poi-marker {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #dc3545;
+            border: 3px solid white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+        
+        .poi-marker:hover {
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+        
+        .node-marker {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #28a745;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+        }
+        
+        .edge-line {
+            position: absolute;
+            background: #28a745;
+            height: 2px;
+            transform-origin: left center;
+            z-index: 1;
+        }
+        
+        .validation-results {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+        
+        .validation-error {
+            color: #dc3545;
+            margin: 0.5rem 0;
+        }
+        
+        .validation-warning {
+            color: #856404;
+            margin: 0.5rem 0;
+        }
+        
+        .validation-success {
+            color: #155724;
+            margin: 0.5rem 0;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #e9ecef;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🗺️ Map Authoring Studio</h1>
+        <p>Complete indoor navigation map creation and management system</p>
+    </div>
+
+    <div class="container">
+        <!-- Workflow Tabs -->
+        <div class="workflow-tabs">
+            <button class="tab active" onclick="switchTab('versions')">📋 Version Management</button>
+            <button class="tab" onclick="switchTab('pois')">📍 Points of Interest</button>
+            <button class="tab" onclick="switchTab('routing')">🔗 Routing Graph</button>
+            <button class="tab" onclick="switchTab('validation')">✅ Validation</button>
+            <button class="tab" onclick="switchTab('publishing')">🚀 Publishing</button>
+        </div>
+
+        <!-- Version Management Tab -->
+        <div id="versions-tab" class="tab-content active">
+            <div class="card">
+                <h3>📋 Floor Plan Version Management</h3>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="buildingSelect">Building</label>
+                        <select id="buildingSelect" onchange="loadFloors()">
+                            <option value="">Select building...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="floorSelect">Floor</label>
+                        <select id="floorSelect" onchange="loadVersions()">
+                            <option value="">Select floor...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>📤 Upload New Version</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="versionNumber">Version Number</label>
+                            <input type="number" id="versionNumber" min="1" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="scaleInput">Scale (pixels/meter)</label>
+                            <input type="number" id="scaleInput" min="0.1" step="0.1" value="1.0">
+                        </div>
+                        <div class="form-group">
+                            <label for="changeNotes">Change Notes</label>
+                            <textarea id="changeNotes" rows="3" placeholder="Describe changes in this version..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="fileInput">Floor Plan File</label>
+                            <input type="file" id="fileInput" accept="image/*,.pdf">
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="uploadNewVersion()">📤 Upload Version</button>
+                        <button class="btn btn-secondary" onclick="previewFile()">👁️ Preview</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>📚 Version History</h3>
+                    <div id="versionList" class="version-list">
+                        <div class="loading">Loading versions...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Points of Interest Tab -->
+        <div id="pois-tab" class="tab-content">
+            <div class="card">
+                <h3>📍 Points of Interest Management</h3>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="poiVersionSelect">Floor Plan Version</label>
+                        <select id="poiVersionSelect" onchange="loadPOIs()">
+                            <option value="">Select version...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>🗺️ Interactive Map Editor</h3>
+                    <div class="canvas-container">
+                        <div id="mapCanvas" class="canvas">
+                            <div class="loading">Click on the map to add POIs</div>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="enablePOIMode()">📍 Add POI Mode</button>
+                        <button class="btn btn-secondary" onclick="enableSelectMode()">👆 Select Mode</button>
+                        <button class="btn btn-danger" onclick="clearPOIs()">🗑️ Clear All</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>📝 POI Details</h3>
+                    <div id="poiDetails">
+                        <p>Select a POI on the map to edit details</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Routing Graph Tab -->
+        <div id="routing-tab" class="tab-content">
+            <div class="card">
+                <h3>🔗 Routing Graph Authoring</h3>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="routingVersionSelect">Floor Plan Version</label>
+                        <select id="routingVersionSelect" onchange="loadRoutingGraph()">
+                            <option value="">Select version...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>🕸️ Routing Graph Editor</h3>
+                    <div class="canvas-container">
+                        <div id="routingCanvas" class="canvas">
+                            <div class="loading">Click to add routing nodes, drag to connect edges</div>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="enableNodeMode()">🟢 Add Node Mode</button>
+                        <button class="btn btn-success" onclick="enableEdgeMode()">🔗 Add Edge Mode</button>
+                        <button class="btn btn-secondary" onclick="enableSelectMode()">👆 Select Mode</button>
+                        <button class="btn btn-danger" onclick="clearRouting()">🗑️ Clear Graph</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>📊 Graph Statistics</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number" id="nodeCount">0</div>
+                            <div class="stat-label">Nodes</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="edgeCount">0</div>
+                            <div class="stat-label">Edges</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="connectedCount">0</div>
+                            <div class="stat-label">Connected</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Validation Tab -->
+        <div id="validation-tab" class="tab-content">
+            <div class="card">
+                <h3>✅ Map Validation</h3>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="validationVersionSelect">Version to Validate</label>
+                        <select id="validationVersionSelect">
+                            <option value="">Select version...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="validateMap()">🔍 Validate Map</button>
+                    <button class="btn btn-secondary" onclick="generateReport()">📄 Generate Report</button>
+                </div>
+
+                <div id="validationResults" class="validation-results" style="display: none;">
+                    <!-- Validation results will be displayed here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Publishing Tab -->
+        <div id="publishing-tab" class="tab-content">
+            <div class="card">
+                <h3>🚀 Map Publishing Workflow</h3>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="publishingVersionSelect">Version to Publish</label>
+                        <select id="publishingVersionSelect">
+                            <option value="">Select version...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="publishedBy">Published By</label>
+                        <input type="text" id="publishedBy" placeholder="Your name...">
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-warning" onclick="submitForReview()">📋 Submit for Review</button>
+                    <button class="btn btn-success" onclick="approveMap()">✅ Approve</button>
+                    <button class="btn btn-primary" onclick="publishMap()">🚀 Publish</button>
+                    <button class="btn btn-secondary" onclick="archiveMap()">📦 Archive</button>
+                </div>
+
+                <div class="card">
+                    <h3>📈 Publishing History</h3>
+                    <div id="publishingHistory">
+                        <div class="loading">Loading publishing history...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- POI Modal -->
+    <div id="poiModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📍 Point of Interest Details</h3>
+                <button class="modal-close" onclick="closeModal('poiModal')">&times;</button>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="poiName">Name</label>
+                    <input type="text" id="poiName" placeholder="POI name...">
+                </div>
+                <div class="form-group">
+                    <label for="poiCategory">Category</label>
+                    <select id="poiCategory">
+                        <option value="room">Room</option>
+                        <option value="elevator">Elevator</option>
+                        <option value="stairs">Stairs</option>
+                        <option value="restroom">Restroom</option>
+                        <option value="entrance">Entrance</option>
+                        <option value="exit">Exit</option>
+                        <option value="service">Service</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="poiType">Type</label>
+                    <input type="text" id="poiType" placeholder="Specific type...">
+                </div>
+                <div class="form-group">
+                    <label for="poiDescription">Description</label>
+                    <textarea id="poiDescription" rows="3" placeholder="POI description..."></textarea>
+                </div>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="savePOI()">💾 Save POI</button>
+                <button class="btn btn-danger" onclick="deletePOI()">🗑️ Delete</button>
+                <button class="btn btn-secondary" onclick="closeModal('poiModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        const API_BASE = `${window.location.origin}/api/v1`;
+        let buildings = [];
+        let floors = [];
+        let versions = [];
+        let pois = [];
+        let routingNodes = [];
+        let routingEdges = [];
+        let currentMode = 'select';
+        let selectedPOI = null;
+        let selectedNode = null;
+        let currentVersion = null;
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            event.target.classList.add('active');
+            
+            // Load data for the tab
+            switch(tabName) {
+                case 'versions':
+                    loadBuildings();
+                    break;
+                case 'pois':
+                    loadVersionsForPOI();
+                    break;
+                case 'routing':
+                    loadVersionsForRouting();
+                    break;
+                case 'validation':
+                    loadVersionsForValidation();
+                    break;
+                case 'publishing':
+                    loadVersionsForPublishing();
+                    break;
+            }
+        }
+
+        // API functions
+        async function apiCall(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'API call failed');
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('API Error:', error);
+                throw error;
+            }
+        }
+
+        // Load buildings
+        async function loadBuildings() {
+            try {
+                buildings = await apiCall('/buildings');
+                const select = document.getElementById('buildingSelect');
+                select.innerHTML = '<option value="">Select building...</option>';
+                
+                buildings.forEach(building => {
+                    select.innerHTML += `<option value="${building.id}">${building.name}</option>`;
+                });
+            } catch (error) {
+                showError('Failed to load buildings: ' + error.message);
+            }
+        }
+
+        // Load floors for selected building
+        async function loadFloors() {
+            const buildingId = document.getElementById('buildingSelect').value;
+            if (!buildingId) return;
+            
+            try {
+                floors = await apiCall(`/buildings/${buildingId}/floors`);
+                const select = document.getElementById('floorSelect');
+                select.innerHTML = '<option value="">Select floor...</option>';
+                
+                floors.forEach(floor => {
+                    select.innerHTML += `<option value="${floor.id}">${floor.name}</option>`;
+                });
+            } catch (error) {
+                showError('Failed to load floors: ' + error.message);
+            }
+        }
+
+        // Load versions for selected floor
+        async function loadVersions() {
+            const floorId = document.getElementById('floorSelect').value;
+            if (!floorId) return;
+            
+            try {
+                versions = await apiCall(`/floors/${floorId}/versions`);
+                displayVersions();
+            } catch (error) {
+                showError('Failed to load versions: ' + error.message);
+            }
+        }
+
+        // Display versions
+        function displayVersions() {
+            const container = document.getElementById('versionList');
+            
+            if (versions.length === 0) {
+                container.innerHTML = '<p>No versions found. Upload your first version!</p>';
+                return;
+            }
+            
+            container.innerHTML = versions.map(version => `
+                <div class="version-item">
+                    <div class="version-info">
+                        <h4>Version ${version.version_number} ${version.is_active ? '(Active)' : ''}</h4>
+                        <p>${version.file_type} • ${(version.file_size / 1024).toFixed(1)} KB • ${new Date(version.created_at).toLocaleDateString()}</p>
+                        <p>${version.change_notes || 'No change notes'}</p>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-secondary" onclick="viewVersion(${version.id})">👁️ View</button>
+                        <button class="btn btn-primary" onclick="editVersion(${version.id})">✏️ Edit</button>
+                        <button class="btn btn-warning" onclick="setActive(${version.id})">⭐ Set Active</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Upload new version
+        async function uploadNewVersion() {
+            const floorId = document.getElementById('floorSelect').value;
+            const versionNumber = document.getElementById('versionNumber').value;
+            const scale = document.getElementById('scaleInput').value;
+            const changeNotes = document.getElementById('changeNotes').value;
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!floorId || !versionNumber || !file) {
+                showError('Please select floor, enter version number, and choose a file');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch(`${API_BASE}/floors/${floorId}/versions?version_number=${versionNumber}&scale=${scale}&change_notes=${encodeURIComponent(changeNotes)}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Upload failed');
+                }
+                
+                const version = await response.json();
+                showSuccess('Version uploaded successfully!');
+                loadVersions();
+                
+                // Clear form
+                fileInput.value = '';
+                document.getElementById('changeNotes').value = '';
+                document.getElementById('versionNumber').value = parseInt(versionNumber) + 1;
+                
+            } catch (error) {
+                showError('Upload failed: ' + error.message);
+            }
+        }
+
+        // Load versions for POI tab
+        async function loadVersionsForPOI() {
+            // Similar to loadVersions but for POI version select
+            // Implementation details...
+        }
+
+        // Load versions for Routing tab
+        async function loadVersionsForRouting() {
+            // Similar implementation for routing
+        }
+
+        // Load versions for Validation tab
+        async function loadVersionsForValidation() {
+            // Similar implementation for validation
+        }
+
+        // Load versions for Publishing tab
+        async function loadVersionsForPublishing() {
+            // Similar implementation for publishing
+        }
+
+        // Validate map
+        async function validateMap() {
+            const versionId = document.getElementById('validationVersionSelect').value;
+            if (!versionId) {
+                showError('Please select a version to validate');
+                return;
+            }
+            
+            try {
+                const result = await apiCall(`/versions/${versionId}/validate`);
+                displayValidationResults(result);
+            } catch (error) {
+                showError('Validation failed: ' + error.message);
+            }
+        }
+
+        // Display validation results
+        function displayValidationResults(result) {
+            const container = document.getElementById('validationResults');
+            container.style.display = 'block';
+            
+            let html = '';
+            
+            if (result.is_valid) {
+                html += '<div class="validation-success">✅ Map validation passed!</div>';
+            } else {
+                html += '<div class="validation-error">❌ Map validation failed!</div>';
+            }
+            
+            if (result.errors.length > 0) {
+                html += '<h4>Errors:</h4>';
+                result.errors.forEach(error => {
+                    html += `<div class="validation-error">• ${error}</div>`;
+                });
+            }
+            
+            if (result.warnings.length > 0) {
+                html += '<h4>Warnings:</h4>';
+                result.warnings.forEach(warning => {
+                    html += `<div class="validation-warning">⚠️ ${warning}</div>`;
+                });
+            }
+            
+            html += '<div class="stats-grid">';
+            Object.entries(result.statistics).forEach(([key, value]) => {
+                html += `
+                    <div class="stat-card">
+                        <div class="stat-number">${value}</div>
+                        <div class="stat-label">${key.replace(/_/g, ' ')}</div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            container.innerHTML = html;
+        }
+
+        // Utility functions
+        function showError(message) {
+            // Display error message
+            console.error(message);
+            // Could show a toast notification here
+        }
+
+        function showSuccess(message) {
+            // Display success message
+            console.log(message);
+            // Could show a toast notification here
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBuildings();
+        });
+    </script>
+</body>
+</html>
