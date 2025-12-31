@@ -77,7 +77,7 @@
             try {
                 const response = await fetch(`${window.location.origin}/`);
                 const result = await response.json();
-                showResult('rootResult', `Status: ${response.status}\nResponse: ${JSON.stringify(result, null, 2)}`, response.ok ? 'success' : 'error');
+                showResult('healthResult', `Status: ${response.status}\nResponse: ${JSON.stringify(result, null, 2)}`, response.ok ? 'success' : 'error');
             } catch (error) {
                 showResult('healthResult', `Error: ${error.message}`, 'error');
             }
@@ -110,9 +110,18 @@
 
         async function testFloors() {
             try {
-                const response = await fetch(`${API_BASE}/floors`);
-                const result = await response.json();
-                showResult('floorsResult', `Status: ${response.status}\nCount: ${result.length}\nData: ${JSON.stringify(result, null, 2)}`, response.ok ? 'success' : 'error');
+                // First get buildings, then get floors for first building
+                const buildingsResponse = await fetch(`${API_BASE}/buildings`);
+                const buildings = await buildingsResponse.json();
+                
+                if (buildings.length > 0) {
+                    const firstBuildingId = buildings[0].id;
+                    const response = await fetch(`${API_BASE}/buildings/${firstBuildingId}/floors`);
+                    const result = await response.json();
+                    showResult('floorsResult', `Status: ${response.status}\nBuilding: ${buildings[0].name}\nCount: ${result.length}\nData: ${JSON.stringify(result, null, 2)}`, response.ok ? 'success' : 'error');
+                } else {
+                    showResult('floorsResult', 'No buildings found to test floors endpoint', 'error');
+                }
             } catch (error) {
                 showResult('floorsResult', `Error: ${error.message}`, 'error');
             }
@@ -124,7 +133,11 @@
                     method: 'POST'
                 });
                 const result = await response.text();
-                showResult('uploadResult', `Status: ${response.status}\nResponse: ${result}`, response.ok ? 'success' : 'error');
+                if (response.status === 422) {
+                    showResult('uploadResult', `Status: ${response.status}\nThis is expected - upload endpoint requires a file\nResponse: ${result}`, 'info');
+                } else {
+                    showResult('uploadResult', `Status: ${response.status}\nResponse: ${result}`, response.ok ? 'success' : 'error');
+                }
             } catch (error) {
                 showResult('uploadResult', `Error: ${error.message}`, 'error');
             }

@@ -7,6 +7,14 @@ from app.crud import get_floor, get_floors_by_building, create_floor
 
 router = APIRouter()
 
+@router.get("/floors", response_model=List[Floor])
+async def read_all_floors(db: Session = Depends(get_db)):
+    """Get all floors"""
+    # This is a simple implementation - you might want to add pagination
+    from app.models import Floor as FloorModel
+    floors = db.query(FloorModel).all()
+    return floors
+
 @router.post("/floors", response_model=Floor)
 async def create_new_floor(floor: FloorCreate, db: Session = Depends(get_db)):
     """Create a new floor"""
