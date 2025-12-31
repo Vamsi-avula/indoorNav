@@ -821,23 +821,246 @@
 
         // Load versions for POI tab
         async function loadVersionsForPOI() {
-            // Similar to loadVersions but for POI version select
-            // Implementation details...
+            try {
+                buildings = await apiCall('/buildings');
+                const select = document.getElementById('poiVersionSelect');
+                select.innerHTML = '<option value="">Select version...</option>';
+                
+                // Load all versions from all floors
+                for (const building of buildings) {
+                    const floors = await apiCall(`/buildings/${building.id}/floors`);
+                    for (const floor of floors) {
+                        const versions = await apiCall(`/floors/${floor.id}/versions`);
+                        versions.forEach(version => {
+                            select.innerHTML += `<option value="${version.id}">${building.name} - ${floor.name} - v${version.version_number}</option>`;
+                        });
+                    }
+                }
+            } catch (error) {
+                showError('Failed to load versions for POI: ' + error.message);
+            }
         }
 
         // Load versions for Routing tab
         async function loadVersionsForRouting() {
-            // Similar implementation for routing
+            try {
+                buildings = await apiCall('/buildings');
+                const select = document.getElementById('routingVersionSelect');
+                select.innerHTML = '<option value="">Select version...</option>';
+                
+                // Load all versions from all floors
+                for (const building of buildings) {
+                    const floors = await apiCall(`/buildings/${building.id}/floors`);
+                    for (const floor of floors) {
+                        const versions = await apiCall(`/floors/${floor.id}/versions`);
+                        versions.forEach(version => {
+                            select.innerHTML += `<option value="${version.id}">${building.name} - ${floor.name} - v${version.version_number}</option>`;
+                        });
+                    }
+                }
+            } catch (error) {
+                showError('Failed to load versions for routing: ' + error.message);
+            }
         }
 
         // Load versions for Validation tab
         async function loadVersionsForValidation() {
-            // Similar implementation for validation
+            try {
+                buildings = await apiCall('/buildings');
+                const select = document.getElementById('validationVersionSelect');
+                select.innerHTML = '<option value="">Select version...</option>';
+                
+                // Load all versions from all floors
+                for (const building of buildings) {
+                    const floors = await apiCall(`/buildings/${building.id}/floors`);
+                    for (const floor of floors) {
+                        const versions = await apiCall(`/floors/${floor.id}/versions`);
+                        versions.forEach(version => {
+                            select.innerHTML += `<option value="${version.id}">${building.name} - ${floor.name} - v${version.version_number}</option>`;
+                        });
+                    }
+                }
+            } catch (error) {
+                showError('Failed to load versions for validation: ' + error.message);
+            }
         }
 
         // Load versions for Publishing tab
         async function loadVersionsForPublishing() {
-            // Similar implementation for publishing
+            try {
+                buildings = await apiCall('/buildings');
+                const select = document.getElementById('publishingVersionSelect');
+                select.innerHTML = '<option value="">Select version...</option>';
+                
+                // Load all versions from all floors
+                for (const building of buildings) {
+                    const floors = await apiCall(`/buildings/${building.id}/floors`);
+                    for (const floor of floors) {
+                        const versions = await apiCall(`/floors/${floor.id}/versions`);
+                        versions.forEach(version => {
+                            select.innerHTML += `<option value="${version.id}">${building.name} - ${floor.name} - v${version.version_number}</option>`;
+                        });
+                    }
+                }
+            } catch (error) {
+                showError('Failed to load versions for publishing: ' + error.message);
+            }
+        }
+
+        // Load POIs for selected version
+        async function loadPOIs() {
+            const versionId = document.getElementById('poiVersionSelect').value;
+            if (!versionId) return;
+            
+            try {
+                pois = await apiCall(`/versions/${versionId}/pois`);
+                displayPOIs();
+                loadMapImage(versionId);
+            } catch (error) {
+                showError('Failed to load POIs: ' + error.message);
+            }
+        }
+
+        // Load map image for selected version
+        async function loadMapImage(versionId) {
+            try {
+                // Get version details to find the floor
+                const version = await apiCall(`/versions/${versionId}`);
+                
+                // Load the floor plan image
+                const canvas = document.getElementById('mapCanvas');
+                canvas.innerHTML = '';
+                
+                const img = document.createElement('img');
+                img.src = version.file_path;
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'contain';
+                img.onload = function() {
+                    // Set canvas size based on image
+                    canvas.style.backgroundImage = `url(${version.file_path})`;
+                    canvas.style.backgroundSize = 'contain';
+                    canvas.style.backgroundRepeat = 'no-repeat';
+                    canvas.style.backgroundPosition = 'center';
+                    canvas.innerHTML = '<div class="loading">Map loaded. Click to add POIs.</div>';
+                };
+                img.onerror = function() {
+                    canvas.innerHTML = '<div class="error">Failed to load map image</div>';
+                };
+                
+            } catch (error) {
+                const canvas = document.getElementById('mapCanvas');
+                canvas.innerHTML = '<div class="error">Failed to load map: ' + error.message + '</div>';
+            }
+        }
+
+        // Display POIs on map
+        function displayPOIs() {
+            const canvas = document.getElementById('mapCanvas');
+            
+            pois.forEach(poi => {
+                const marker = document.createElement('div');
+                marker.className = 'poi-marker';
+                marker.style.left = poi.x_coordinate + 'px';
+                marker.style.top = poi.y_coordinate + 'px';
+                marker.title = poi.name;
+                marker.onclick = function() { editPOI(poi); };
+                canvas.appendChild(marker);
+            });
+        }
+
+        // Load routing graph
+        async function loadRoutingGraph() {
+            const versionId = document.getElementById('routingVersionSelect').value;
+            if (!versionId) return;
+            
+            try {
+                // Load map image first
+                await loadRoutingMapImage(versionId);
+                
+                // Load routing nodes and edges
+                routingNodes = await apiCall(`/versions/${versionId}/routing/nodes`);
+                routingEdges = await apiCall(`/versions/${versionId}/routing/edges`);
+                
+                displayRoutingGraph();
+                updateRoutingStats();
+            } catch (error) {
+                showError('Failed to load routing graph: ' + error.message);
+            }
+        }
+
+        // Load map image for routing
+        async function loadRoutingMapImage(versionId) {
+            try {
+                const version = await apiCall(`/versions/${versionId}`);
+                
+                const canvas = document.getElementById('routingCanvas');
+                canvas.style.backgroundImage = `url(${version.file_path})`;
+                canvas.style.backgroundSize = 'contain';
+                canvas.style.backgroundRepeat = 'no-repeat';
+                canvas.style.backgroundPosition = 'center';
+                canvas.innerHTML = '<div class="loading">Map loaded. Click to add routing nodes.</div>';
+                
+            } catch (error) {
+                const canvas = document.getElementById('routingCanvas');
+                canvas.innerHTML = '<div class="error">Failed to load map: ' + error.message + '</div>';
+            }
+        }
+
+        // Display routing graph
+        function displayRoutingGraph() {
+            const canvas = document.getElementById('routingCanvas');
+            
+            // Clear existing markers
+            canvas.querySelectorAll('.node-marker, .edge-line').forEach(el => el.remove());
+            
+            // Draw edges
+            routingEdges.forEach(edge => {
+                const fromNode = routingNodes.find(n => n.id === edge.from_node_id);
+                const toNode = routingNodes.find(n => n.id === edge.to_node_id);
+                
+                if (fromNode && toNode) {
+                    const line = document.createElement('div');
+                    line.className = 'edge-line';
+                    
+                    const dx = toNode.x_coordinate - fromNode.x_coordinate;
+                    const dy = toNode.y_coordinate - fromNode.y_coordinate;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                    
+                    line.style.left = fromNode.x_coordinate + 'px';
+                    line.style.top = fromNode.y_coordinate + 'px';
+                    line.style.width = distance + 'px';
+                    line.style.transform = `rotate(${angle}deg)`;
+                    
+                    canvas.appendChild(line);
+                }
+            });
+            
+            // Draw nodes
+            routingNodes.forEach(node => {
+                const marker = document.createElement('div');
+                marker.className = 'node-marker';
+                marker.style.left = node.x_coordinate + 'px';
+                marker.style.top = node.y_coordinate + 'px';
+                marker.title = `Node ${node.id}`;
+                marker.onclick = function() { selectNode(node); };
+                canvas.appendChild(marker);
+            });
+        }
+
+        // Update routing statistics
+        function updateRoutingStats() {
+            document.getElementById('nodeCount').textContent = routingNodes.length;
+            document.getElementById('edgeCount').textContent = routingEdges.length;
+            
+            // Calculate connected nodes (simplified)
+            const connectedNodes = new Set();
+            routingEdges.forEach(edge => {
+                connectedNodes.add(edge.from_node_id);
+                connectedNodes.add(edge.to_node_id);
+            });
+            document.getElementById('connectedCount').textContent = connectedNodes.size;
         }
 
         // Validate map
@@ -897,11 +1120,360 @@
             container.innerHTML = html;
         }
 
+        // Interactive mode functions
+        function enablePOIMode() {
+            currentMode = 'poi';
+            const canvas = document.getElementById('mapCanvas');
+            canvas.style.cursor = 'crosshair';
+            canvas.onclick = function(e) { addPOI(e); };
+        }
+
+        function enableNodeMode() {
+            currentMode = 'node';
+            const canvas = document.getElementById('routingCanvas');
+            canvas.style.cursor = 'crosshair';
+            canvas.onclick = function(e) { addRoutingNode(e); };
+        }
+
+        function enableEdgeMode() {
+            currentMode = 'edge';
+            const canvas = document.getElementById('routingCanvas');
+            canvas.style.cursor = 'pointer';
+            canvas.onclick = function(e) { addRoutingEdge(e); };
+        }
+
+        function enableSelectMode() {
+            currentMode = 'select';
+            document.querySelectorAll('.canvas').forEach(canvas => {
+                canvas.style.cursor = 'default';
+                canvas.onclick = null;
+            });
+        }
+
+        // Add POI on canvas click
+        async function addPOI(event) {
+            if (currentMode !== 'poi') return;
+            
+            const canvas = document.getElementById('mapCanvas');
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            const versionId = document.getElementById('poiVersionSelect').value;
+            if (!versionId) {
+                showError('Please select a version first');
+                return;
+            }
+            
+            // Create temporary POI for editing
+            selectedPOI = {
+                version_id: parseInt(versionId),
+                x_coordinate: x,
+                y_coordinate: y,
+                name: '',
+                category: 'room',
+                poi_type: '',
+                description: ''
+            };
+            
+            // Show POI modal for details
+            document.getElementById('poiModal').classList.add('active');
+            document.getElementById('poiName').value = '';
+            document.getElementById('poiCategory').value = 'room';
+            document.getElementById('poiType').value = '';
+            document.getElementById('poiDescription').value = '';
+        }
+
+        // Add routing node on canvas click
+        async function addRoutingNode(event) {
+            if (currentMode !== 'node') return;
+            
+            const canvas = document.getElementById('routingCanvas');
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            const versionId = document.getElementById('routingVersionSelect').value;
+            if (!versionId) {
+                showError('Please select a version first');
+                return;
+            }
+            
+            try {
+                const node = await apiCall(`/versions/${versionId}/routing/nodes`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        version_id: parseInt(versionId),
+                        x_coordinate: x,
+                        y_coordinate: y,
+                        node_type: 'junction'
+                    })
+                });
+                
+                routingNodes.push(node);
+                displayRoutingGraph();
+                updateRoutingStats();
+                showSuccess('Routing node added successfully');
+            } catch (error) {
+                showError('Failed to add routing node: ' + error.message);
+            }
+        }
+
+        // Add routing edge between nodes
+        async function addRoutingEdge(event) {
+            if (currentMode !== 'edge') return;
+            
+            const canvas = document.getElementById('routingCanvas');
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            // Find nearest node
+            let nearestNode = null;
+            let minDistance = Infinity;
+            
+            routingNodes.forEach(node => {
+                const distance = Math.sqrt(
+                    Math.pow(node.x_coordinate - x, 2) + 
+                    Math.pow(node.y_coordinate - y, 2)
+                );
+                if (distance < minDistance && distance < 30) { // 30px threshold
+                    minDistance = distance;
+                    nearestNode = node;
+                }
+            });
+            
+            if (!nearestNode) {
+                showError('Click near a routing node to connect edges');
+                return;
+            }
+            
+            if (!selectedNode) {
+                selectedNode = nearestNode;
+                showSuccess(`Selected node ${nearestNode.id}. Click another node to connect.`);
+            } else {
+                if (selectedNode.id === nearestNode.id) {
+                    showError('Cannot connect node to itself');
+                    return;
+                }
+                
+                const versionId = document.getElementById('routingVersionSelect').value;
+                if (!versionId) {
+                    showError('Please select a version first');
+                    return;
+                }
+                
+                try {
+                    const edge = await apiCall(`/versions/${versionId}/routing/edges`, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            version_id: parseInt(versionId),
+                            from_node_id: selectedNode.id,
+                            to_node_id: nearestNode.id,
+                            distance: Math.sqrt(
+                                Math.pow(nearestNode.x_coordinate - selectedNode.x_coordinate, 2) + 
+                                Math.pow(nearestNode.y_coordinate - selectedNode.y_coordinate, 2)
+                            ) / 100, // Convert pixels to meters (assuming 100px = 1m)
+                            edge_type: 'walkway'
+                        })
+                    });
+                    
+                    routingEdges.push(edge);
+                    displayRoutingGraph();
+                    updateRoutingStats();
+                    showSuccess(`Connected node ${selectedNode.id} to node ${nearestNode.id}`);
+                    
+                    selectedNode = null;
+                } catch (error) {
+                    showError('Failed to add routing edge: ' + error.message);
+                }
+            }
+        }
+
+        // Save POI
+        async function savePOI() {
+            if (!selectedPOI) return;
+            
+            selectedPOI.name = document.getElementById('poiName').value;
+            selectedPOI.category = document.getElementById('poiCategory').value;
+            selectedPOI.poi_type = document.getElementById('poiType').value;
+            selectedPOI.description = document.getElementById('poiDescription').value;
+            
+            if (!selectedPOI.name) {
+                showError('POI name is required');
+                return;
+            }
+            
+            try {
+                const poi = await apiCall(`/versions/${selectedPOI.version_id}/pois`, {
+                    method: 'POST',
+                    body: JSON.stringify(selectedPOI)
+                });
+                
+                pois.push(poi);
+                displayPOIs();
+                closeModal('poiModal');
+                showSuccess('POI added successfully');
+                selectedPOI = null;
+            } catch (error) {
+                showError('Failed to save POI: ' + error.message);
+            }
+        }
+
+        // Edit POI
+        function editPOI(poi) {
+            selectedPOI = poi;
+            document.getElementById('poiModal').classList.add('active');
+            document.getElementById('poiName').value = poi.name;
+            document.getElementById('poiCategory').value = poi.category;
+            document.getElementById('poiType').value = poi.poi_type;
+            document.getElementById('poiDescription').value = poi.description;
+        }
+
+        // Delete POI
+        async function deletePOI() {
+            if (!selectedPOI || !selectedPOI.id) {
+                showError('No POI selected for deletion');
+                return;
+            }
+            
+            try {
+                await apiCall(`/pois/${selectedPOI.id}`, { method: 'DELETE' });
+                
+                // Remove from local array
+                pois = pois.filter(p => p.id !== selectedPOI.id);
+                
+                // Refresh display
+                displayPOIs();
+                closeModal('poiModal');
+                showSuccess('POI deleted successfully');
+                selectedPOI = null;
+            } catch (error) {
+                showError('Failed to delete POI: ' + error.message);
+            }
+        }
+
+        // Select routing node
+        function selectNode(node) {
+            selectedNode = node;
+            showSuccess(`Selected node ${node.id}`);
+        }
+
+        // Clear POIs
+        function clearPOIs() {
+            if (!confirm('Are you sure you want to clear all POIs?')) return;
+            
+            pois = [];
+            const canvas = document.getElementById('mapCanvas');
+            canvas.querySelectorAll('.poi-marker').forEach(el => el.remove());
+            showSuccess('All POIs cleared');
+        }
+
+        // Clear routing graph
+        function clearRouting() {
+            if (!confirm('Are you sure you want to clear the routing graph?')) return;
+            
+            routingNodes = [];
+            routingEdges = [];
+            selectedNode = null;
+            
+            const canvas = document.getElementById('routingCanvas');
+            canvas.querySelectorAll('.node-marker, .edge-line').forEach(el => el.remove());
+            
+            updateRoutingStats();
+            showSuccess('Routing graph cleared');
+        }
+
+        // Preview file
+        function previewFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showError('Please select a file first');
+                return;
+            }
+            
+            // Simple preview - in a real app, you'd show the image
+            showSuccess(`Selected file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
+        }
+
+        // View version
+        function viewVersion(versionId) {
+            // Open the version in a new tab or modal
+            window.open(`/uploads/floor_plans/versions/${versionId}`, '_blank');
+        }
+
+        // Edit version
+        function editVersion(versionId) {
+            // Open edit modal for version
+            showSuccess(`Edit version ${versionId} - feature coming soon`);
+        }
+
+        // Set active version
+        async function setActive(versionId) {
+            // Implementation to set active version
+            showSuccess(`Set version ${versionId} as active - feature coming soon`);
+        }
+
+        // Submit for review
+        async function submitForReview() {
+            const versionId = document.getElementById('publishingVersionSelect').value;
+            if (!versionId) {
+                showError('Please select a version');
+                return;
+            }
+            
+            try {
+                const result = await apiCall(`/versions/${versionId}/publish`, {
+                    method: 'POST'
+                });
+                
+                showSuccess('Version submitted for review');
+                loadPublishingHistory();
+            } catch (error) {
+                showError('Failed to submit for review: ' + error.message);
+            }
+        }
+
+        // Approve map
+        async function approveMap() {
+            showSuccess('Approve map - feature coming soon');
+        }
+
+        // Publish map
+        async function publishMap() {
+            showSuccess('Publish map - feature coming soon');
+        }
+
+        // Archive map
+        async function archiveMap() {
+            showSuccess('Archive map - feature coming soon');
+        }
+
+        // Generate report
+        function generateReport() {
+            showSuccess('Generate report - feature coming soon');
+        }
+
+        // Load publishing history
+        async function loadPublishingHistory() {
+            const container = document.getElementById('publishingHistory');
+            container.innerHTML = '<div class="loading">Loading publishing history...</div>';
+            
+            try {
+                // For now, show placeholder
+                container.innerHTML = '<p>No publishing history found</p>';
+            } catch (error) {
+                container.innerHTML = '<p>Failed to load publishing history</p>';
+            }
+        }
+
         // Utility functions
         function showError(message) {
             // Display error message
             console.error(message);
-            // Could show a toast notification here
+            alert('Error: ' + message);
         }
 
         function showSuccess(message) {
