@@ -82,30 +82,76 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        name: 'Engineering Building',
-                        address: '123 Tech Street, Campus',
+                        name: 'Sample Building',
+                        address: '123 Test Street',
                         latitude: 40.7128,
-                        longitude: -74.0060,
-                        floors: [
-                            { name: 'Ground Floor', number: 0, width: 100.0, height: 80.0 },
-                            { name: 'First Floor', number: 1, width: 100.0, height: 80.0 },
-                            { name: 'Second Floor', number: 2, width: 100.0, height: 80.0 }
-                        ]
+                        longitude: -74.0060
                     })
                 });
-                
-                if (buildingResponse.ok) {
-                    const building = await buildingResponse.json();
-                    document.getElementById('createResult').innerHTML = 
-                        `<div class="success">Sample building created! Building ID: ${building.id}</div>`;
-                    loadBuildings();
-                } else {
-                    throw new Error('Failed to create building');
+
+                if (!buildingResponse.ok) {
+                    const error = await buildingResponse.json();
+                    throw new Error(error.detail || 'Failed to create building');
                 }
+
+                const building = await buildingResponse.json();
+                buildings.push(building);
+
+                // Create floor
+                const floorResponse = await fetch(`${API_BASE}/floors`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        building_id: building.id,
+                        floor_number: 1,
+                        name: 'First Floor',
+                        width: 100.0,
+                        height: 100.0
+                    })
+                });
+
+                if (!floorResponse.ok) {
+                    const error = await floorResponse.json();
+                    throw new Error(error.detail || 'Failed to create floor');
+                }
+
+                const floor = await floorResponse.json();
+                floors.push(floor);
+
+                // Update dropdowns
+                updateBuildingDropdown();
+                updateFloorDropdown();
+
+                showResult('✅ Sample building and floor created successfully!', 'success');
             } catch (error) {
-                document.getElementById('createResult').innerHTML = 
-                    `<div class="error">Error: ${error.message}</div>`;
+                showResult(`❌ Error creating sample data: ${error.message}`, 'error');
             }
+        }
+
+        // Update building dropdown
+        function updateBuildingDropdown() {
+            const buildingSelect = document.getElementById('buildingSelect');
+            buildingSelect.innerHTML = '<option value="">Select a building...</option>';
+            
+            for (const building of buildings) {
+                buildingSelect.innerHTML += `<option value="${building.id}">${building.name}</option>`;
+            }
+        }
+
+        // Update floor dropdown
+        function updateFloorDropdown() {
+            const floorSelect = document.getElementById('floorSelect');
+            floorSelect.innerHTML = '<option value="">Select a floor...</option>';
+            
+            for (const floor of floors) {
+                floorSelect.innerHTML += `<option value="${floor.id}">${floor.name} (Floor ${floor.floor_number})</option>`;
+            }
+        }
+
+        // Show result message
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('createResult');
+            resultDiv.innerHTML = `<div class="${type}">${message}</div>`;
         }
 
         // Load buildings and floors
