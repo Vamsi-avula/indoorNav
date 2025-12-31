@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from app.routers import buildings, floors, fingerprints, upload, init
+from app.routers import buildings, floors, fingerprints, upload, init, debug
 from app.database import engine
 from app.models import Base
 
@@ -61,6 +61,7 @@ app.include_router(floors.router, prefix="/api/v1", tags=["floors"])
 app.include_router(fingerprints.router, prefix="/api/v1", tags=["fingerprints"])
 app.include_router(upload.router, prefix="/api/v1", tags=["upload"])
 app.include_router(init.router, prefix="/api/v1", tags=["init"])
+app.include_router(debug.router, prefix="/api/v1", tags=["debug"])
 
 # Include map authoring router only if enabled
 if MAP_AUTH_ENABLED:

@@ -28,6 +28,13 @@
         <h1>🔍 Floor Plan Debug Dashboard</h1>
         
         <div class="debug-section">
+            <h3>🔧 Database Debug</h3>
+            <button onclick="checkDatabaseStatus()">Check Database Status</button>
+            <button onclick="forceCreateSampleData()">Force Create Sample Data</button>
+            <div id="databaseDebugResult"></div>
+        </div>
+
+        <div class="debug-section">
             <h3>📊 Check All Buildings and Floors</h3>
             <button onclick="checkAllFloors()">Check All Floors</button>
             <div id="allFloorsResult"></div>
@@ -86,6 +93,78 @@
             }
             
             element.innerHTML = html;
+        }
+
+        async function checkDatabaseStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/debug/database-status`);
+                const result = await response.json();
+                
+                let html = `
+                    <h4>Database Status: ${result.database_status}</h4>
+                    <p>Buildings: ${result.buildings_count}</p>
+                    <p>Floors: ${result.floors_count}</p>
+                `;
+                
+                if (result.buildings_count > 0) {
+                    html += '<h5>Buildings:</h5>';
+                    for (const building of result.buildings) {
+                        html += `<p>- ${building.name} (ID: ${building.id})</p>`;
+                    }
+                }
+                
+                if (result.floors_count > 0) {
+                    html += '<h5>Floors:</h5>';
+                    for (const floor of result.floors) {
+                        html += `<p>- ${floor.name} (Building ${floor.building_id}, ID: ${floor.id})</p>`;
+                    }
+                }
+                
+                showResult('databaseDebugResult', html, response.ok ? 'success' : 'error');
+                
+            } catch (error) {
+                showResult('databaseDebugResult', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function forceCreateSampleData() {
+            try {
+                const response = await fetch(`${API_BASE}/force-create-sample-data`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const result = await response.json();
+                
+                let html = `
+                    <h4>${result.message}</h4>
+                    <p>Buildings: ${result.buildings}</p>
+                    <p>Floors: ${result.floors}</p>
+                `;
+                
+                if (result.data) {
+                    html += '<h5>Created Data:</h5>';
+                    html += '<h6>Buildings:</h6>';
+                    for (const building of result.data.buildings) {
+                        html += `<p>- ${building.name} (ID: ${building.id})</p>`;
+                    }
+                    html += '<h6>Floors:</h6>';
+                    for (const floor of result.data.floors) {
+                        html += `<p>- ${floor.name} (Building ${floor.building_id}, ID: ${floor.id})</p>`;
+                    }
+                }
+                
+                showResult('databaseDebugResult', html, response.ok ? 'success' : 'error');
+                
+                // Auto-refresh other data
+                setTimeout(() => {
+                    checkAllFloors();
+                }, 1000);
+                
+            } catch (error) {
+                showResult('databaseDebugResult', `Error: ${error.message}`, 'error');
+            }
         }
 
         async function checkAllFloors() {
