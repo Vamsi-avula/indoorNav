@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Debug - IndoorNav</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; text-align: center; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .debug-section h3 { margin-top: 0; color: #495057; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; font-family: monospace; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .form-group { margin: 15px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        .image-preview { max-width: 300px; max-height: 200px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
+        .step { background: #e9ecef; padding: 15px; margin: 10px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Upload Debug Dashboard</h1>
+        
+        <div class="step">
+            <h3>📋 Debug Steps:</h3>
+            <ol>
+                <li>Check Warehouse Ground Floor current status</li>
+                <li>Upload a test image with detailed logging</li>
+                <li>Verify database update</li>
+                <li>Test image accessibility</li>
+                <li>Check static file serving</li>
+            </ol>
+        </div>
+
+        <div class="debug-section">
+            <h3>🏢 Step 1: Check Warehouse Ground Floor</h3>
+            <button onclick="checkWarehouseFloor()">Check Warehouse Ground Floor</button>
+            <div id="warehouseFloorResult"></div>
+        </div>
+
+        <div class="debug-section">
+            <h3>📤 Step 2: Test Upload with Debug</h3>
+            <div class="form-group">
+                <label for="buildingSelect">Building:</label>
+                <select id="buildingSelect">
+                    <option value="">Select a building...</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="floorSelect">Floor:</label>
+                <select id="floorSelect">
+                    <option value="">Select a floor...</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="fileInput">Choose Image:</label>
+                <input type="file" id="fileInput" accept="image/*" onchange="previewImage(event)">
+                <img id="imagePreview" class="image-preview" style="display: none;">
+            </div>
+            
+            <button onclick="testUploadWithDebug()">📤 Upload with Debug</button>
+            <div id="uploadDebugResult"></div>
+        </div>
+
+        <div class="debug-section">
+            <h3>🔍 Step 3: Verify Database Update</h3>
+            <button onclick="verifyDatabaseUpdate()">Check Database After Upload</button>
+            <div id="databaseVerifyResult"></div>
+        </div>
+
+        <div class="debug-section">
+            <h3>🖼️ Step 4: Test Image Access</h3>
+            <button onclick="testImageAccess()">Test Uploaded Image</button>
+            <div id="imageAccessResult"></div>
+        </div>
+
+        <div class="debug-section">
+            <h3>📁 Step 5: Check Static Files</h3>
+            <button onclick="checkStaticFiles()">List Upload Directory</button>
+            <div id="staticFilesResult"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = `${window.location.origin}/api/v1`;
+        let buildings = [];
+        let floors = [];
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        // Load buildings
+        async function loadBuildings() {
+            try {
+                const response = await fetch(`${API_BASE}/buildings`);
+                buildings = await response.json();
+                
+                const buildingSelect = document.getElementById('buildingSelect');
+                buildingSelect.innerHTML = '<option value="">Select a building...</option>';
+                
+                for (const building of buildings) {
+                    buildingSelect.innerHTML += `<option value="${building.id}">${building.name}</option>`;
+                }
+            } catch (error) {
+                console.error('Error loading buildings:', error);
+            }
+        }
+
+        // Load floors for a building
+        async function loadFloors(buildingId) {
+            try {
+                const response = await fetch(`${API_BASE}/buildings/${buildingId}/floors`);
+                floors = await response.json();
+                
+                const floorSelect = document.getElementById('floorSelect');
+                floorSelect.innerHTML = '<option value="">Select a floor...</option>';
+                
+                for (const floor of floors) {
+                    floorSelect.innerHTML += `<option value="${floor.id}">${floor.name} (Floor ${floor.floor_number})</option>`;
+                }
+            } catch (error) {
+                console.error('Error loading floors:', error);
+            }
+        }
+
+        // Preview image
+        function previewImage(event) {
+            const file = event.target.files[0];
+            const preview = document.getElementById('imagePreview');
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+
+        async function checkWarehouseFloor() {
+            try {
+                // Find Warehouse building
+                const buildingsResponse = await fetch(`${API_BASE}/buildings`);
+                const buildings = await buildingsResponse.json();
+                
+                const warehouse = buildings.find(b => b.name.includes('Warehouse'));
+                
+                if (!warehouse) {
+                    showResult('warehouseFloorResult', '❌ Warehouse Facility building not found', 'error');
+                    return;
+                }
+                
+                // Get warehouse floors
+                const floorsResponse = await fetch(`${API_BASE}/buildings/${warehouse.id}/floors`);
+                const floors = await floorsResponse.json();
+                
+                const groundFloor = floors.find(f => f.name.includes('Ground') || f.floor_number === 1);
+                
+                if (!groundFloor) {
+                    showResult('warehouseFloorResult', `❌ Ground Floor not found in Warehouse. Available floors: ${floors.map(f => f.name).join(', ')}`, 'error');
+                    return;
+                }
+                
+                let result = `
+                    ✅ Warehouse Ground Floor Found:
+                    Building: ${warehouse.name} (ID: ${warehouse.id})
+                    Floor: ${groundFloor.name} (ID: ${groundFloor.id})
+                    Floor Number: ${groundFloor.floor_number}
+                    Has Image: ${groundFloor.floor_plan_image ? 'Yes' : 'No'}
+                    Image Path: ${groundFloor.floor_plan_image || 'None'}
+                `;
+                
+                if (groundFloor.floor_plan_image) {
+                    result += `
+                        <br><br>
+                        <img src="${groundFloor.floor_plan_image}" style="max-width: 200px; max-height: 150px; border: 1px solid #ddd;" 
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <div style="display:none; color:red;">❌ Image failed to load from path</div>
+                    `;
+                }
+                
+                showResult('warehouseFloorResult', result, 'success');
+                
+            } catch (error) {
+                showResult('warehouseFloorResult', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testUploadWithDebug() {
+            const buildingId = document.getElementById('buildingSelect').value;
+            const floorId = document.getElementById('floorSelect').value;
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!buildingId || !floorId) {
+                showResult('uploadDebugResult', '❌ Please select building and floor', 'error');
+                return;
+            }
+            
+            if (!file) {
+                showResult('uploadDebugResult', '❌ Please select an image file', 'error');
+                return;
+            }
+            
+            let debugLog = `📤 Upload Debug Log:\n`;
+            debugLog += `Building ID: ${buildingId}\n`;
+            debugLog += `Floor ID: ${floorId}\n`;
+            debugLog += `File: ${file.name}\n`;
+            debugLog += `File Size: ${file.size} bytes\n`;
+            debugLog += `File Type: ${file.type}\n`;
+            debugLog += `Timestamp: ${new Date().toISOString()}\n\n`;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                debugLog += `🔄 Sending request to: ${API_BASE}/upload-floor-plan/${buildingId}/${floorId}\n`;
+                
+                const response = await fetch(`${API_BASE}/upload-floor-plan/${buildingId}/${floorId}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                debugLog += `📡 Response Status: ${response.status}\n`;
+                debugLog += `📡 Response OK: ${response.ok}\n`;
+                
+                const result = await response.json();
+                debugLog += `📡 Response Body:\n${JSON.stringify(result, null, 2)}\n\n`;
+                
+                if (response.ok) {
+                    debugLog += `✅ Upload API Success!\n`;
+                    debugLog += `Expected Image Path: ${result.path}\n`;
+                    debugLog += `File Name: ${result.filename}\n`;
+                    
+                    // Test immediate database check
+                    setTimeout(async () => {
+                        await verifyDatabaseUpdate();
+                    }, 1000);
+                    
+                } else {
+                    debugLog += `❌ Upload API Failed!\n`;
+                    debugLog += `Error: ${result.detail || 'Unknown error'}\n`;
+                }
+                
+                showResult('uploadDebugResult', debugLog, response.ok ? 'success' : 'error');
+                
+            } catch (error) {
+                debugLog += `❌ Upload Exception: ${error.message}\n`;
+                showResult('uploadDebugResult', debugLog, 'error');
+            }
+        }
+
+        async function verifyDatabaseUpdate() {
+            try {
+                const buildingId = document.getElementById('buildingSelect').value;
+                const floorId = document.getElementById('floorSelect').value;
+                
+                if (!floorId) {
+                    showResult('databaseVerifyResult', '❌ Please select a floor first', 'error');
+                    return;
+                }
+                
+                // Get floor details directly
+                const response = await fetch(`${API_BASE}/floors/${floorId}`);
+                const floor = await response.json();
+                
+                let result = `🔍 Database Verification:\n`;
+                result += `Floor ID: ${floor.id}\n`;
+                result += `Floor Name: ${floor.name}\n`;
+                result += `Building ID: ${floor.building_id}\n`;
+                result += `Floor Plan Image: ${floor.floor_plan_image || 'NULL'}\n\n`;
+                
+                if (floor.floor_plan_image) {
+                    result += `✅ Database updated successfully!\n`;
+                    result += `Image stored in database: ${floor.floor_plan_image}\n`;
+                    
+                    // Test image accessibility
+                    try {
+                        const imageResponse = await fetch(floor.floor_plan_image);
+                        result += `Image Accessibility: ${imageResponse.ok ? '✅ Accessible' : '❌ Not accessible'}\n`;
+                        result += `Image Status: ${imageResponse.status}\n`;
+                    } catch (error) {
+                        result += `Image Accessibility: ❌ Error - ${error.message}\n`;
+                    }
+                } else {
+                    result += `❌ Database NOT updated!\n`;
+                    result += `floor_plan_image field is still NULL\n`;
+                }
+                
+                showResult('databaseVerifyResult', result, floor.floor_plan_image ? 'success' : 'error');
+                
+            } catch (error) {
+                showResult('databaseVerifyResult', `❌ Database verification error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testImageAccess() {
+            try {
+                const buildingId = document.getElementById('buildingSelect').value;
+                const floorId = document.getElementById('floorSelect').value;
+                
+                if (!floorId) {
+                    showResult('imageAccessResult', '❌ Please select a floor first', 'error');
+                    return;
+                }
+                
+                // Get floor details
+                const floorResponse = await fetch(`${API_BASE}/floors/${floorId}`);
+                const floor = await floorResponse.json();
+                
+                if (!floor.floor_plan_image) {
+                    showResult('imageAccessResult', '❌ No image path found in database', 'error');
+                    return;
+                }
+                
+                let result = `🖼️ Image Access Test:\n`;
+                result += `Image Path: ${floor.floor_plan_image}\n\n`;
+                
+                // Test different access methods
+                const testPaths = [
+                    floor.floor_plan_image,
+                    `${window.location.origin}${floor.floor_plan_image}`,
+                    floor.floor_plan_image.replace('/uploads/', '/static/uploads/')
+                ];
+                
+                for (let i = 0; i < testPaths.length; i++) {
+                    const testPath = testPaths[i];
+                    try {
+                        const imageResponse = await fetch(testPath);
+                        result += `Test ${i + 1}: ${imageResponse.ok ? '✅' : '❌'} ${testPath} (${imageResponse.status})\n`;
+                        
+                        if (imageResponse.ok) {
+                            result += `\n✅ Working path found: ${testPath}\n`;
+                            result += `<img src="${testPath}" style="max-width: 200px; max-height: 150px; border: 1px solid #ddd;">\n`;
+                            break;
+                        }
+                    } catch (error) {
+                        result += `Test ${i + 1}: ❌ ${testPath} - Error: ${error.message}\n`;
+                    }
+                }
+                
+                showResult('imageAccessResult', result, 'info');
+                
+            } catch (error) {
+                showResult('imageAccessResult', `❌ Image access test error: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkStaticFiles() {
+            try {
+                // Test if uploads directory is accessible
+                const testPaths = [
+                    '/uploads/',
+                    '/uploads/floor_plans/',
+                    '/static/uploads/',
+                    '/static/uploads/floor_plans/'
+                ];
+                
+                let result = `📁 Static File Directory Test:\n\n`;
+                
+                for (const path of testPaths) {
+                    try {
+                        const response = await fetch(`${window.location.origin}${path}`);
+                        result += `${path}: ${response.status} ${response.ok ? '✅' : '❌'}\n`;
+                    } catch (error) {
+                        result += `${path}: ❌ Error - ${error.message}\n`;
+                    }
+                }
+                
+                showResult('staticFilesResult', result, 'info');
+                
+            } catch (error) {
+                showResult('staticFilesResult', `❌ Static files check error: ${error.message}`, 'error');
+            }
+        }
+
+        // Handle building selection change
+        document.getElementById('buildingSelect').addEventListener('change', async function(e) {
+            const buildingId = e.target.value;
+            if (buildingId) {
+                await loadFloors(buildingId);
+            }
+        });
+
+        // Load buildings on page load
+        window.addEventListener('load', () => {
+            loadBuildings();
+            checkWarehouseFloor();
+        });
+    </script>
+</body>
+</html>
