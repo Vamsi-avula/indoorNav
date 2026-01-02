@@ -2,11 +2,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.routers import buildings, floors, fingerprints, upload, init, debug, upload_debug
-from app.database import engine
+from app.database import engine, test_database_connection
 from app.models import Base
+from init_database_on_startup import initialize_database
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
+
+# Initialize database with sample data if needed
+print("🔄 Checking database initialization...")
+initialize_database()
 
 # Try to import map authoring components safely
 try:
